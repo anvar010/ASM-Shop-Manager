@@ -1,0 +1,327 @@
+.dayStrip {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 2px;
+}
+
+.dayChip {
+  flex-shrink: 0;
+  min-width: 76px;
+  text-align: center;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.dayChipActive {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.dayShort {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.daySub {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.dayChipActive .daySub {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dayTotal {
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.pastBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--warning-bg);
+  border-radius: var(--radius-md);
+  padding: 8px 8px 8px 14px;
+  margin-bottom: 12px;
+}
+
+.pastText {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--warning);
+  min-width: 0;
+}
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Scrolls on a phone; wraps once there is room, so nothing clips. */
+.catChips {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-bottom: 12px;
+}
+
+.catChips::-webkit-scrollbar {
+  display: none;
+}
+
+.modeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.modeButton {
+  text-align: center;
+  padding: 13px 4px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.splitGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.billRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 14px;
+}
+
+.billMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.modeBadge {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* The on-screen keypad is a pointer/large-screen affordance. On phones the
+   native numeric keyboard already does this job better. */
+.keypad {
+  display: none;
+}
+
+.amountDisplay {
+  display: none;
+}
+
+.amountField {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .dayStrip {
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .dayChip {
+    min-width: 104px;
+    padding: 12px 14px;
+  }
+
+  .dayShort {
+    font-size: 13px;
+  }
+
+  .daySub {
+    font-size: 11px;
+  }
+
+  .dayTotal {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+
+  .pastBar {
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+
+  .pastText {
+    font-size: 13px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .leftCol,
+  .rightCol {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .splitGrid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .catChips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+    margin-bottom: 14px;
+  }
+
+  .modeGrid {
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .modeButton {
+    padding: 10px 4px;
+    font-size: 12.5px;
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .keyButton {
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    font-family: var(--font-space-grotesk), sans-serif;
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--text);
+    transition: filter 0.12s ease;
+  }
+
+  .keyButton:hover {
+    filter: brightness(0.96);
+  }
+
+  .keyButton:active {
+    filter: brightness(0.92);
+  }
+
+  .amountDisplay {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 14px 18px;
+    background: var(--surface-alt);
+    margin-bottom: 10px;
+  }
+
+  .amountValue {
+    font-size: 34px;
+    color: var(--text);
+  }
+
+  .amountField {
+    display: none;
+  }
+
+  .billRow {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: none;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    box-shadow: none;
+  }
+
+  .entriesList {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .closingRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 20px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .layout {
+    grid-template-columns: 560px minmax(0, 1fr);
+  }
+
+  /* Keypad beside the other fields, so the form stays short enough to fit. */
+  .formGrid {
+    display: grid;
+    grid-template-columns: 196px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .formFields {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .keypad {
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .keyButton {
+    height: 46px;
+    font-size: 19px;
+  }
+
+  .amountDisplay {
+    padding: 11px 14px;
+    margin-bottom: 8px;
+  }
+
+  .amountValue {
+    font-size: 26px;
+  }
+}

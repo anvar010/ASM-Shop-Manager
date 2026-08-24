@@ -1,0 +1,407 @@
+/* Building blocks shared by every tab. */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.cardSm {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sectionLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.muted {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.fieldLabel {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rowBetween {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* ---------------- Banners ---------------- */
+
+.banner {
+  border-radius: var(--radius-lg);
+  padding: 18px;
+  color: #fff;
+}
+
+.bannerPrimary {
+  background: var(--primary-dark);
+}
+
+.bannerDark {
+  background: var(--expense-dark);
+}
+
+.bannerLabel {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 600;
+}
+
+.bannerValue {
+  font-size: 32px;
+  color: #fff;
+  line-height: 1.05;
+  margin: 4px 0;
+}
+
+.bannerRule {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 16px 0 14px;
+}
+
+/* ---------------- Chips ---------------- */
+
+.chip {
+  flex-shrink: 0;
+  padding: 13px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.chipRow {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 2px;
+}
+
+.chipWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* ---------------- Inputs ---------------- */
+
+.input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: var(--surface-alt);
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.input::placeholder {
+  color: var(--text-faint);
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 13px 14px;
+  background: var(--surface-alt);
+}
+
+.bareInput {
+  border: none;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+  font-size: 20px;
+  color: var(--text);
+}
+
+/* ---------------- Buttons ---------------- */
+
+.primaryButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-md);
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s ease;
+}
+
+.primaryButton:hover {
+  background: var(--primary-dark);
+}
+
+.darkButton {
+  composes: primaryButton;
+  background: var(--expense-dark);
+}
+
+.darkButton:hover {
+  background: #1e2229;
+}
+
+.linkButton {
+  font-size: 12px;
+  color: var(--primary);
+  font-weight: 700;
+  padding: 0 4px;
+}
+
+/* ---------------- Bars and badges ---------------- */
+
+.badge {
+  flex-shrink: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+
+.trackFill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+/* ---------------- Bar chart ---------------- */
+
+.chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  height: 88px;
+}
+
+.chartCol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  gap: 6px;
+}
+
+.chartBar {
+  width: 100%;
+  max-width: 26px;
+  min-height: 4px;
+  background: linear-gradient(180deg, var(--primary) 0%, var(--primary-light) 130%);
+  border-radius: 6px 6px 2px 2px;
+}
+
+.chartLabel {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+/* ---------------- Empty state ---------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-faint);
+}
+
+.emptyTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin: 12px 0 4px;
+}
+
+/* ---------------- Icon tiles ---------------- */
+
+.iconTile {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ---------------- Row action buttons ----------------
+   44px hit area with a smaller visual tile inside, so touch targets clear the
+   minimum without the UI looking heavy. */
+
+.rowAction {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rowActionInner {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-alt);
+  transition: filter 0.15s ease;
+}
+
+.rowAction:hover .rowActionInner {
+  filter: brightness(0.95);
+}
+
+.rowActionDanger {
+  background: var(--danger-bg);
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 24px;
+  }
+
+  .banner {
+    padding: 24px;
+  }
+
+  .bannerLabel,
+  .muted {
+    font-size: 13px;
+  }
+
+  .bannerValue {
+    font-size: 40px;
+  }
+
+  .cardTitle {
+    font-size: 15px;
+  }
+
+  .chart {
+    height: 180px;
+    gap: 10px;
+  }
+
+  .chartBar {
+    max-width: 46px;
+    border-radius: 8px 8px 3px 3px;
+  }
+
+  .chartLabel {
+    font-size: 12px;
+  }
+
+  .chip {
+    padding: 9px 16px;
+    font-size: 12.5px;
+  }
+
+  .input {
+    padding: 13px 16px;
+    font-size: 15px;
+  }
+
+  .primaryButton {
+    padding: 15px;
+    font-size: 15px;
+  }
+
+  .fieldLabel {
+    font-size: 11.5px;
+  }
+
+  .empty {
+    padding: 80px 20px;
+  }
+
+  .emptyTitle {
+    font-size: 15px;
+  }
+
+  .badge {
+    font-size: 10.5px;
+  }
+
+  /* Pointer-driven breakpoints can use tighter, calmer controls. */
+  .rowAction {
+    width: 32px;
+    height: 32px;
+  }
+
+  .rowActionInner {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .chart {
+    height: 168px;
+    gap: 14px;
+  }
+
+  .chartBar {
+    max-width: 60px;
+    border-radius: 9px 9px 3px 3px;
+  }
+}

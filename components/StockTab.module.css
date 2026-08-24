@@ -1,0 +1,177 @@
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: var(--surface);
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.filterChip {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.filterActive {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+}
+
+.addButton {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 18px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--primary);
+  color: #fff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.productCard {
+  padding: 11px 11px 9px;
+}
+
+/* On mobile the card is half-width, so name and stepper stack. */
+.productTop {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.qty {
+  min-width: 36px;
+  text-align: center;
+}
+
+.qtyValue {
+  font-size: 15px;
+  color: var(--text);
+}
+
+.qtyUnit {
+  font-size: 9px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.numRow {
+  display: flex;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .controls {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .searchRow {
+    flex: 1;
+    padding: 13px 16px;
+  }
+
+  .searchInput {
+    font-size: 15px;
+  }
+
+  .filterChip,
+  .addButton {
+    padding: 13px 20px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+  }
+
+  .grid {
+    gap: 12px;
+  }
+
+  .productCard {
+    padding: 16px 18px;
+  }
+
+  .productTop {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .qtyValue {
+    font-size: 18px;
+  }
+
+  .qty {
+    min-width: 42px;
+  }
+
+  .stepper {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .formGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}

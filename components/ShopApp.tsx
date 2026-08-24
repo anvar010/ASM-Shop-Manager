@@ -1,0 +1,70 @@
+"use client";
+
+import { useShop } from "@/lib/useShop";
+import type { TabId } from "@/lib/types";
+import { formatLongDate } from "@/lib/format";
+import styles from "./ShopApp.module.css";
+import { IconBars, IconBill, IconBox, IconHome, IconNote } from "./Icons";
+import HomeTab from "./HomeTab";
+import BillsTab from "./BillsTab";
+import ExpensesTab from "./ExpensesTab";
+import StockTab from "./StockTab";
+import ReportsTab from "./ReportsTab";
+
+const TABS: { id: TabId; label: string; title: string; Icon: typeof IconHome }[] = [
+  { id: "home", label: "Home", title: "Dashboard", Icon: IconHome },
+  { id: "bills", label: "Bills", title: "Daily Bills", Icon: IconBill },
+  { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote },
+  { id: "stock", label: "Stock", title: "Stock Count", Icon: IconBox },
+  { id: "reports", label: "Reports", title: "Reports", Icon: IconBars },
+];
+
+export default function ShopApp() {
+  const shop = useShop();
+  const current = TABS.find((t) => t.id === shop.activeTab) ?? TABS[0];
+
+  return (
+    <div className={styles.shell}>
+      <header className={styles.header}>
+        <div className={styles.brand}>
+          <div>
+            <div className={styles.wordmark}>ASM</div>
+            <div className={styles.tagline}>Shop Manager</div>
+          </div>
+          <div className={styles.divider} />
+          <div className={styles.screenTitle}>{current.title}</div>
+        </div>
+        <div className={styles.headerRight}>
+          <div className={styles.headerDate}>{formatLongDate(new Date())}</div>
+          <div className={styles.avatar}>A</div>
+        </div>
+      </header>
+
+      <main className={styles.content}>
+        {shop.activeTab === "home" && <HomeTab shop={shop} />}
+        {shop.activeTab === "bills" && <BillsTab shop={shop} />}
+        {shop.activeTab === "expenses" && <ExpensesTab shop={shop} />}
+        {shop.activeTab === "stock" && <StockTab shop={shop} />}
+        {shop.activeTab === "reports" && <ReportsTab shop={shop} />}
+      </main>
+
+      <nav className={styles.nav} aria-label="Main">
+        {TABS.map(({ id, label, Icon }) => {
+          const active = shop.activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+              onClick={() => shop.setActiveTab(id)}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon size={21} color="currentColor" />
+              <span className={styles.navLabel}>{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
