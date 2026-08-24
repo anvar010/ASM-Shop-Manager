@@ -16,6 +16,7 @@ export const CATEGORIES: Category[] = [
 export const PAYMENT_MODES: PaymentMode[] = [
   { id: "cash", label: "Cash", note: "Notes and coins", color: "#1E9E6B" },
   { id: "upi", label: "UPI", note: "PhonePe, GPay, Paytm", color: "#2952CC" },
+  { id: "credit", label: "Credit", note: "Taken now, paid later", color: "#C08A2E" },
 ];
 
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [

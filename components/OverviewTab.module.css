@@ -89,6 +89,16 @@
   margin-bottom: 7px;
 }
 
+/* Period-scoped figures, kept inside the hero so they follow its toggle. */
+.periodStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
 .statGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -226,7 +236,17 @@
     font-size: 13px;
   }
 
-  .statGrid {
+  /* Period-scoped figures, kept inside the hero so they follow its toggle. */
+.periodStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.statGrid {
     grid-template-columns: 1fr;
     gap: 16px;
     margin-bottom: 0;

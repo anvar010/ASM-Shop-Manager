@@ -91,6 +91,17 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
               </div>
             ))}
           </div>
+
+          <div className={c.periodStats}>
+            <div>
+              <div className={`num ${c.statValue}`}>{formatINR(shop.periodAvgPerDay)}</div>
+              <div className={c.statLabel}>Average per day</div>
+            </div>
+            <div>
+              <div className={`num ${c.statValue}`}>{shop.periodBest.label}</div>
+              <div className={c.statLabel}>{shop.periodBest.title}</div>
+            </div>
+          </div>
         </section>
 
         {/* Profit + stat tiles */}

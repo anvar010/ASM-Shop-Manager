@@ -45,6 +45,7 @@ const TODAY_BILLS: Omit<Bill, "date">[] = [
   { id: "b4", desc: "Bananas + Apples", category: "produce", amount: 95, time: "12:50 PM", mode: "cash" },
   { id: "b5", desc: "Mineral Water (case)", category: "other", amount: 360, time: "2:20 PM", mode: "upi" },
   { id: "b6", desc: "Grocery mix", category: "groceries", amount: 425, time: "4:05 PM", mode: "cash" },
+  { id: "b7", desc: "Rice + dal", category: "groceries", amount: 480, time: "5:30 PM", mode: "credit", customer: "Ravi" },
 ];
 
 /* ------------------------------------------------------------------ *

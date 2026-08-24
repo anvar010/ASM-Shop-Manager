@@ -1,5 +1,5 @@
 export type CategoryId = "groceries" | "produce" | "other";
-export type PaymentModeId = "cash" | "upi";
+export type PaymentModeId = "cash" | "upi" | "credit";
 export type ExpenseCategoryId =
   | "supplier"
   | "rent"
@@ -8,7 +8,7 @@ export type ExpenseCategoryId =
   | "transport"
   | "other";
 
-export type TabId = "bills" | "overview" | "expenses" | "stock" | "reports";
+export type TabId = "bills" | "overview" | "expenses" | "stock";
 export type PeriodId = "today" | "week" | "month";
 
 export interface Category {
@@ -40,6 +40,8 @@ export interface Bill {
   /** e.g. "9:14 AM" */
   time: string;
   mode: PaymentModeId;
+  /** Who owes the money. Only set when mode is "credit". */
+  customer?: string;
 }
 
 export interface Expense {

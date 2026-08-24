@@ -21,6 +21,13 @@ export function todayTrend(bills: Bill[]): number[] {
   );
 }
 
+/** Days each period spans, and what its strongest trend bucket represents. */
+export const PERIOD_META: Record<PeriodId, { days: number; bestTitle: string }> = {
+  today: { days: 1, bestTitle: "Busiest hours" },
+  week: { days: 7, bestTitle: "Best day" },
+  month: { days: 28, bestTitle: "Best week" },
+};
+
 export function sumOf(list: Bill[]): number {
   return list.reduce((s, b) => s + b.amount, 0);
 }

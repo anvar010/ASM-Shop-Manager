@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
 import { formatINR, formatTime } from "./format";
-import { buildPeriod } from "./periods";
+import { buildPeriod, PERIOD_META } from "./periods";
 import { DAY_OPTIONS, SEED_BILLS, SEED_EXPENSES, SEED_PRODUCTS, TODAY_KEY } from "./seed";
 import type {
   Bill,
@@ -25,6 +25,7 @@ export function useShop() {
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState<CategoryId>("groceries");
   const [formMode, setFormMode] = useState<PaymentModeId>("cash");
+  const [formCustomer, setFormCustomer] = useState("");
 
   const [expenses, setExpenses] = useState(SEED_EXPENSES);
   const [expAmount, setExpAmount] = useState("");
@@ -61,6 +62,24 @@ export function useShop() {
     () => buildPeriod(period, bills, todaysBills),
     [period, bills, todaysBills],
   );
+
+  const periodAvgPerDay = useMemo(
+    () => Math.round(periodStats.total / PERIOD_META[period].days),
+    [periodStats, period],
+  );
+
+  /* Strongest bucket of the current trend: an hour block today, a weekday
+     over a week, a week over a month. */
+  const periodBest = useMemo(() => {
+    let best = 0;
+    periodStats.trend.forEach((v, i) => {
+      if (v > periodStats.trend[best]) best = i;
+    });
+    return {
+      title: PERIOD_META[period].bestTitle,
+      label: periodStats.total > 0 ? periodStats.trendLabels[best] : "—",
+    };
+  }, [periodStats, period]);
 
   const chartBars = useMemo(() => {
     const max = Math.max(...periodStats.trend, 1);
@@ -118,6 +137,12 @@ export function useShop() {
   const todayCash = useMemo(
     () => todaysBills.reduce((s, b) => (b.mode === "cash" ? s + b.amount : s), 0),
     [todaysBills],
+  );
+
+  /* Credit is billed but not collected, so it is tracked apart from the drawer. */
+  const creditTotal = useMemo(
+    () => viewBills.reduce((s, b) => (b.mode === "credit" ? s + b.amount : s), 0),
+    [viewBills],
   );
 
   const billRows = useMemo(
@@ -197,25 +222,6 @@ export function useShop() {
     [lowStockItems],
   );
 
-  const weekReport = useMemo(() => buildPeriod("week", bills, todaysBills), [bills, todaysBills]);
-
-  const reportBars = useMemo(() => {
-    const max = Math.max(...weekReport.trend, 1);
-    return weekReport.trend.map((v, i) => ({
-      key: `report-${i}`,
-      heightPct: Math.round((v / max) * 100),
-      label: weekReport.trendLabels[i],
-    }));
-  }, [weekReport]);
-
-  const reportBestDay = useMemo(() => {
-    let best = 0;
-    weekReport.trend.forEach((v, i) => {
-      if (v > weekReport.trend[best]) best = i;
-    });
-    return weekReport.trendLabels[best];
-  }, [weekReport]);
-
   const selectedDay = DAY_OPTIONS.find((d) => d.key === selectedDate) ?? DAY_OPTIONS[0];
 
   const dayChips = useMemo(
@@ -252,11 +258,15 @@ export function useShop() {
       amount: amt,
       time: formatTime(new Date()),
       mode: formMode,
+      ...(formMode === "credit"
+        ? { customer: formCustomer.trim() || "Unnamed" }
+        : {}),
     };
     setBills((prev) => [bill, ...prev]);
     setFormAmount("");
     setFormDesc("");
-  }, [formAmount, formDesc, formCategory, formMode]);
+    setFormCustomer("");
+  }, [formAmount, formDesc, formCategory, formMode, formCustomer]);
 
   const deleteBill = useCallback((id: string) => {
     setBills((prev) => prev.filter((b) => b.id !== id));
@@ -271,6 +281,7 @@ export function useShop() {
       setFormDesc(bill.desc);
       setFormCategory(bill.category);
       setFormMode(bill.mode);
+      setFormCustomer(bill.customer ?? "");
     },
     [bills],
   );
@@ -354,6 +365,8 @@ export function useShop() {
 
     // period / overview
     periodStats,
+    periodAvgPerDay,
+    periodBest,
     chartBars,
     categoryBreakdown,
     donutGradient,
@@ -388,6 +401,9 @@ export function useShop() {
     setFormCategory,
     formMode,
     setFormMode,
+    formCustomer,
+    setFormCustomer,
+    creditTotal,
     pressPad,
     addBill,
     deleteBill,
@@ -426,10 +442,6 @@ export function useShop() {
     addProduct,
     stepStock,
 
-    // reports
-    weekReport,
-    reportBars,
-    reportBestDay,
   };
 }
 

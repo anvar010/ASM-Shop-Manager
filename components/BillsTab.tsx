@@ -110,6 +110,19 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             })}
           </div>
 
+          {shop.formMode === "credit" && (
+            <input
+              className={s.input}
+              type="text"
+              placeholder="Who is taking it on credit?"
+              value={shop.formCustomer}
+              onChange={(e) => shop.setFormCustomer(e.target.value)}
+              style={{ marginBottom: 14 }}
+              aria-label="Customer name"
+              autoComplete="off"
+            />
+          )}
+
           <button type="button" className={s.primaryButton} onClick={shop.addBill}>
             <IconPlus size={16} color="#fff" />
             Add Bill
@@ -202,6 +215,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                         className={s.truncate}
                         style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600 }}
                       >
+                        {b.customer ? `${b.customer} · ` : ""}
                         {b.catLabel} · {b.time}
                       </span>
                     </div>
@@ -317,6 +331,14 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 {formatINR(shop.cashInDrawer)}
               </div>
             </div>
+            {shop.creditTotal > 0 && (
+              <div className={s.rowBetween} style={{ marginTop: 8 }}>
+                <div className={s.bannerLabel}>On credit — to collect</div>
+                <div className="num" style={{ fontSize: 16, color: "var(--accent-gold-soft)" }}>
+                  {formatINR(shop.creditTotal)}
+                </div>
+              </div>
+            )}
           </section>
 
           {showForm && form}
