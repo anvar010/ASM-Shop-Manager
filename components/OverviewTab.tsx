@@ -4,7 +4,7 @@ import type { Shop } from "@/lib/useShop";
 import type { PeriodId } from "@/lib/types";
 import { formatINR, formatShortDate } from "@/lib/format";
 import s from "./shared.module.css";
-import c from "./HomeTab.module.css";
+import c from "./OverviewTab.module.css";
 import { IconBill, IconBox, IconNote, IconTrend } from "./Icons";
 
 const PERIODS: { id: PeriodId; label: string }[] = [
@@ -13,7 +13,7 @@ const PERIODS: { id: PeriodId; label: string }[] = [
   { id: "month", label: "Month" },
 ];
 
-export default function HomeTab({ shop }: { shop: Shop }) {
+export default function OverviewTab({ shop }: { shop: Shop }) {
   const { periodStats } = shop;
   const compareColor = !periodStats.has
     ? "var(--text-faint)"
@@ -28,7 +28,7 @@ export default function HomeTab({ shop }: { shop: Shop }) {
         <div className={s.muted}>{formatShortDate(new Date())}</div>
       </div>
 
-      {/* Quick actions — Home doubles as a launcher for the three entry flows. */}
+      {/* Quick actions — Overview doubles as a launcher for the three entry flows. */}
       <div className={c.quickRow}>
         <button type="button" className={`${c.quickButton} ${c.quickPrimary}`} onClick={shop.goAddBill}>
           <IconBill size={20} color="#fff" />

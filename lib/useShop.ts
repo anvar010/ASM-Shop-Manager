@@ -16,7 +16,7 @@ import type {
 } from "./types";
 
 export function useShop() {
-  const [activeTab, setActiveTab] = useState<TabId>("home");
+  const [activeTab, setActiveTab] = useState<TabId>("bills");
   const [period, setPeriod] = useState<PeriodId>("today");
 
   const [bills, setBills] = useState<Bill[]>(SEED_BILLS);
@@ -352,7 +352,7 @@ export function useShop() {
     period,
     setPeriod,
 
-    // period / home
+    // period / overview
     periodStats,
     chartBars,
     categoryBreakdown,

@@ -4,16 +4,16 @@ import { useShop } from "@/lib/useShop";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./ShopApp.module.css";
-import { IconBars, IconBill, IconBox, IconHome, IconNote } from "./Icons";
-import HomeTab from "./HomeTab";
+import { IconBars, IconBill, IconBox, IconNote, IconTrend } from "./Icons";
+import OverviewTab from "./OverviewTab";
 import BillsTab from "./BillsTab";
 import ExpensesTab from "./ExpensesTab";
 import StockTab from "./StockTab";
 import ReportsTab from "./ReportsTab";
 
-const TABS: { id: TabId; label: string; title: string; Icon: typeof IconHome }[] = [
-  { id: "home", label: "Home", title: "Dashboard", Icon: IconHome },
+const TABS: { id: TabId; label: string; title: string; Icon: typeof IconBill }[] = [
   { id: "bills", label: "Bills", title: "Daily Bills", Icon: IconBill },
+  { id: "overview", label: "Overview", title: "Overview", Icon: IconTrend },
   { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote },
   { id: "stock", label: "Stock", title: "Stock Count", Icon: IconBox },
   { id: "reports", label: "Reports", title: "Reports", Icon: IconBars },
@@ -41,8 +41,8 @@ export default function ShopApp() {
       </header>
 
       <main className={styles.content}>
-        {shop.activeTab === "home" && <HomeTab shop={shop} />}
         {shop.activeTab === "bills" && <BillsTab shop={shop} />}
+        {shop.activeTab === "overview" && <OverviewTab shop={shop} />}
         {shop.activeTab === "expenses" && <ExpensesTab shop={shop} />}
         {shop.activeTab === "stock" && <StockTab shop={shop} />}
         {shop.activeTab === "reports" && <ReportsTab shop={shop} />}
