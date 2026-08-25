@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
 import { buildPeriod, PERIOD_META } from "./periods";
+import { api, loadLedger, setApiErrorHandler } from "./api";
 import {
   DAY_OPTIONS,
   dateKeyOf,
   dayBack,
-  SEED_BILLS,
-  SEED_EXPENSES,
-  SEED_PURCHASES,
   TODAY_KEY,
 } from "./seed";
 import type {
@@ -19,16 +17,28 @@ import type {
   ExpenseCategoryId,
   PaymentModeId,
   PeriodId,
+  Expense,
   Purchase,
   PurchaseRangeId,
   TabId,
 } from "./types";
 
+/** CHAR(36) keys, generated here so a new row can render before it is saved. */
+function newId(_prefix: string): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`.padEnd(36, "0").slice(0, 36);
+}
+
 export function useShop() {
   const [activeTab, setActiveTab] = useState<TabId>("bills");
+  /* The ledger lives in the database; this mirrors it so every derived figure
+     stays synchronous. Writes update the mirror first and persist after. */
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodId>("today");
 
-  const [bills, setBills] = useState<Bill[]>(SEED_BILLS);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [selectedDate, setSelectedDate] = useState(TODAY_KEY);
   const [formAmount, setFormAmount] = useState("");
   const [formDesc, setFormDesc] = useState("");
@@ -36,12 +46,12 @@ export function useShop() {
   const [formMode, setFormMode] = useState<PaymentModeId>("cash");
   const [formCustomer, setFormCustomer] = useState("");
 
-  const [expenses, setExpenses] = useState(SEED_EXPENSES);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
   const [expCategory, setExpCategory] = useState<ExpenseCategoryId>("supplier");
 
-  const [purchases, setPurchases] = useState<Purchase[]>(SEED_PURCHASES);
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchaseSearch, setPurchaseSearch] = useState("");
   const [purchaseDueOnly, setPurchaseDueOnly] = useState(false);
   /* The all-bills page filters independently of the Stock tab, so switching
@@ -79,6 +89,24 @@ export function useShop() {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
 
+  useEffect(() => {
+    setApiErrorHandler(setSaveError);
+    let cancelled = false;
+    loadLedger().then((data) => {
+      if (cancelled) return;
+      if (!data) setLoadError("Could not load your data. Check the connection and reload.");
+      else {
+        setBills(data.bills);
+        setExpenses(data.expenses);
+        setPurchases(data.purchases);
+      }
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   /* ---------------------------------------------------------------- *
    * Derived
    * ---------------------------------------------------------------- */
@@ -92,7 +120,13 @@ export function useShop() {
 
   const todayTotal = useMemo(() => todaysBills.reduce((s, b) => s + b.amount, 0), [todaysBills]);
   const viewTotal = useMemo(() => viewBills.reduce((s, b) => s + b.amount, 0), [viewBills]);
-  const expenseTotal = useMemo(() => expenses.reduce((s, e) => s + e.amount, 0), [expenses]);
+  /* Expenses carry a date now, so the profit figure must scope to today
+     rather than summing every expense ever recorded. */
+  const todaysExpenses = useMemo(() => expenses.filter((e) => e.date === TODAY_KEY), [expenses]);
+  const expenseTotal = useMemo(
+    () => todaysExpenses.reduce((s, e) => s + e.amount, 0),
+    [todaysExpenses],
+  );
   const profit = todayTotal - expenseTotal;
 
   const periodStats = useMemo(
@@ -253,11 +287,11 @@ export function useShop() {
 
   const expenseRows = useMemo(
     () =>
-      expenses.map((e) => {
+      todaysExpenses.map((e) => {
         const cat = expenseMeta(e.category);
         return { ...e, catLabel: cat.label, catColor: cat.color, amountLabel: formatINR(e.amount) };
       }),
-    [expenses],
+    [todaysExpenses],
   );
 
   /* A purchase is settled once the upfront payment plus every later
@@ -653,7 +687,7 @@ export function useShop() {
       return known ? known.customer : typed;
     };
     const bill: Bill = {
-      id: `b${Date.now()}`,
+      id: newId("b"),
       date: TODAY_KEY,
       desc: formDesc.trim() || "Sale",
       category: formCategory,
@@ -663,6 +697,7 @@ export function useShop() {
       ...(formMode === "credit" ? { customer: creditCustomerName() } : {}),
     };
     setBills((prev) => [bill, ...prev]);
+    api.addBill(bill);
     setFormAmount("");
     setFormDesc("");
     setFormCustomer("");
@@ -670,6 +705,7 @@ export function useShop() {
 
   const deleteBill = useCallback((id: string) => {
     setBills((prev) => prev.filter((b) => b.id !== id));
+    api.deleteBill(id);
   }, []);
 
   const editBill = useCallback(
@@ -677,6 +713,7 @@ export function useShop() {
       const bill = bills.find((b) => b.id === id);
       if (!bill) return;
       setBills((prev) => prev.filter((b) => b.id !== id));
+      api.deleteBill(id);
       setFormAmount(String(bill.amount));
       setFormDesc(bill.desc);
       setFormCategory(bill.category);
@@ -689,22 +726,23 @@ export function useShop() {
   const addExpense = useCallback(() => {
     const amt = parseFloat(expAmount);
     if (!amt || amt <= 0) return;
-    setExpenses((prev) => [
-      {
-        id: `e${Date.now()}`,
-        desc: expDesc.trim() || "Expense",
-        category: expCategory,
-        amount: amt,
-        time: formatTime(new Date()),
-      },
-      ...prev,
-    ]);
+    const expense: Expense = {
+      id: newId("e"),
+      date: TODAY_KEY,
+      desc: expDesc.trim() || "Expense",
+      category: expCategory,
+      amount: amt,
+      time: formatTime(new Date()),
+    };
+    setExpenses((prev) => [expense, ...prev]);
+    api.addExpense(expense);
     setExpAmount("");
     setExpDesc("");
   }, [expAmount, expDesc, expCategory]);
 
   const deleteExpense = useCallback((id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
+    api.deleteExpense(id);
   }, []);
 
   const editExpense = useCallback(
@@ -712,6 +750,7 @@ export function useShop() {
       const exp = expenses.find((e) => e.id === id);
       if (!exp) return;
       setExpenses((prev) => prev.filter((e) => e.id !== id));
+      api.deleteExpense(id);
       setExpAmount(String(exp.amount));
       setExpDesc(exp.desc);
       setExpCategory(exp.category);
@@ -736,19 +775,18 @@ export function useShop() {
     const known = supplierStats.find((r) => r.supplier.toLowerCase() === typed.toLowerCase());
     const typedPaid = parseFloat(purchasePaid);
     const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
-    setPurchases((prev) => [
-      {
-        id: `w${Date.now()}`,
-        date: TODAY_KEY,
-        supplier: known ? known.supplier : typed,
-        item: purchaseItem.trim() || "Stock",
-        amount: amt,
-        // Paying more than the goods are worth would read as a negative balance.
-        paidUpfront: Math.min(paid, amt),
-        payments: [],
-      },
-      ...prev,
-    ]);
+    const purchase: Purchase = {
+      id: newId("w"),
+      date: TODAY_KEY,
+      supplier: known ? known.supplier : typed,
+      item: purchaseItem.trim() || "Stock",
+      amount: amt,
+      // Paying more than the goods are worth would read as a negative balance.
+      paidUpfront: Math.min(paid, amt),
+      payments: [],
+    };
+    setPurchases((prev) => [purchase, ...prev]);
+    api.addPurchase(purchase);
     resetPurchaseForm();
   }, [
     supplierStats,
@@ -786,18 +824,19 @@ export function useShop() {
     const typedPaid = parseFloat(editPaid);
     const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
     setPurchases((prev) =>
-      prev.map((p) =>
-        p.id === editingPurchaseId
-          ? {
-              ...p,
-              supplier: known ? known.supplier : typed,
-              item: editItem.trim() || "Stock",
-              amount: amt,
-              // Later part-payments stand; the upfront figure absorbs the rest.
-              paidUpfront: Math.max(0, Math.min(paid, amt - editingPaidLater)),
-            }
-          : p,
-      ),
+      prev.map((p) => {
+        if (p.id !== editingPurchaseId) return p;
+        const next = {
+          ...p,
+          supplier: known ? known.supplier : typed,
+          item: editItem.trim() || "Stock",
+          amount: amt,
+          // Later part-payments stand; the upfront figure absorbs the rest.
+          paidUpfront: Math.max(0, Math.min(paid, amt - editingPaidLater)),
+        };
+        api.updatePurchase(next);
+        return next;
+      }),
     );
     setEditingPurchaseId(null);
   }, [
@@ -829,6 +868,7 @@ export function useShop() {
   const deletePurchase = useCallback(
     (id: string) => {
       setPurchases((prev) => prev.filter((p) => p.id !== id));
+      api.deletePurchase(id);
       if (editingPurchaseId === id) setEditingPurchaseId(null);
     },
     [editingPurchaseId],
@@ -869,10 +909,9 @@ export function useShop() {
         const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
         const take = Math.min(amount, owed);
         if (take <= 0) return b;
-        return {
-          ...b,
-          creditPayments: [...log, { id: `cp${Date.now()}`, date: TODAY_KEY, amount: take }],
-        };
+        const payment = { id: newId("cp"), date: TODAY_KEY, amount: take };
+        api.settleBill({ ...payment, billId: b.id });
+        return { ...b, creditPayments: [...log, payment] };
       }),
     );
     setSettlingId(null);
@@ -887,10 +926,9 @@ export function useShop() {
         const log = b.creditPayments ?? [];
         const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
         if (owed <= 0) return b;
-        return {
-          ...b,
-          creditPayments: [...log, { id: `cp${Date.now()}_${b.id}`, date: TODAY_KEY, amount: owed }],
-        };
+        const payment = { id: newId("cp"), date: TODAY_KEY, amount: owed };
+        api.settleBill({ ...payment, billId: b.id });
+        return { ...b, creditPayments: [...log, payment] };
       }),
     );
     setSettlingId(null);
@@ -954,10 +992,9 @@ export function useShop() {
           const owed = Math.max(0, p.amount - paid);
           const pay = Math.min(amount, owed);
           if (pay <= 0) return p;
-          return {
-            ...p,
-            payments: [...p.payments, { id: `wp${Date.now()}`, date: TODAY_KEY, amount: pay }],
-          };
+          const payment = { id: newId("wp"), date: TODAY_KEY, amount: pay };
+          api.payPurchase({ ...payment, purchaseId: p.id });
+          return { ...p, payments: [...p.payments, payment] };
         }),
       );
       setPayingId(null);
@@ -976,6 +1013,12 @@ export function useShop() {
   const goAddPurchase = useCallback(() => setActiveTab("stock"), []);
 
   return {
+    // loading
+    loading,
+    loadError,
+    saveError,
+    dismissSaveError: () => setSaveError(null),
+
     // navigation
     activeTab,
     setActiveTab,

@@ -1,0 +1,117 @@
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--bg);
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  padding: 0 24px 24px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  /* Clips the banner to the rounded top corners. */
+  overflow: hidden;
+}
+
+/* Full-bleed across the card, cancelling its side padding. */
+.banner {
+  margin: 0 -24px 20px;
+  line-height: 0;
+}
+
+.bannerImage {
+  width: 100%;
+  height: auto;
+}
+
+.brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+
+/* Height-driven so the wordmark's 2.04:1 ratio is never distorted. */
+.logo {
+  height: 62px;
+  width: auto;
+}
+
+.title {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.subtitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin: 4px 0 20px;
+  text-align: center;
+}
+
+.field {
+  display: block;
+  margin-bottom: 14px;
+}
+
+.label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.input {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.error {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.submit {
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s ease;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+}

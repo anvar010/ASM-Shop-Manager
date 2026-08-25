@@ -49,6 +49,8 @@ export interface Bill {
 
 export interface Expense {
   id: string;
+  /** YYYY-MM-DD */
+  date: string;
   desc: string;
   category: ExpenseCategoryId;
   amount: number;
