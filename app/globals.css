@@ -52,9 +52,17 @@ html,
 body {
   margin: 0;
   padding: 0;
-  /* Never let a focused field or a wide row shift the page sideways. */
-  overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Kept off <html> deliberately. Hiding overflow there makes iOS treat the root
+ * as a scroll container, which interferes with the scrolling it does to bring
+ * a focused field into view — visible only in an installed app, where there is
+ * no browser chrome to absorb it.
+ */
+body {
+  overflow-x: hidden;
 }
 
 body {

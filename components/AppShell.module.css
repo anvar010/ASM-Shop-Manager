@@ -1,5 +1,8 @@
 .shell {
-  min-height: 100dvh;
+  /* svh, not dvh: a height that changes as the keyboard opens re-lays out
+     the whole shell underneath whatever is being typed into. */
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   background: var(--bg);

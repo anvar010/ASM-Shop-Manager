@@ -1,5 +1,8 @@
 .screen {
-  min-height: 100dvh;
+  /* svh, not dvh: the dynamic unit shrinks when the keyboard opens, which
+     re-centres this card mid-tap and loses the focus that raised it. */
+  min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
