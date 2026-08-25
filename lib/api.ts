@@ -28,6 +28,8 @@ export function setDesyncHandler(handler: () => void) {
 /** A dead session cannot be retried out of; send them to sign in again. */
 function signedOut(res: Response): boolean {
   if (res.status !== 401) return false;
+  // Redirecting to the page we are already on would reload it forever.
+  if (window.location.pathname === "/login") return true;
   const to = new URL("/login", window.location.origin);
   to.searchParams.set("next", window.location.pathname + window.location.search);
   window.location.href = to.toString();

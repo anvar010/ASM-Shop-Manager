@@ -25,7 +25,7 @@ export function ShopProvider({
   user: SessionUser | null;
   children: React.ReactNode;
 }) {
-  const shop = useShop();
+  const shop = useShop(user !== null);
 
   return (
     <UserContext.Provider value={user}>

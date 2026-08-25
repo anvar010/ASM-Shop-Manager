@@ -24,7 +24,13 @@ function newId(_prefix: string): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`.padEnd(36, "0").slice(0, 36);
 }
 
-export function useShop() {
+/**
+ * `signedIn` gates the initial load. The provider wraps every route including
+ * the login screen, where fetching the ledger can only ever answer 401 — and
+ * answering 401 sends the browser to /login, which mounts the provider, which
+ * fetches again. That was a reload loop, not a slow page.
+ */
+export function useShop(signedIn: boolean) {
   const [activeTab, setActiveTab] = useState<TabId>("bills");
   /* The ledger lives in the database; this mirrors it so every derived figure
      stays synchronous. Writes update the mirror first and persist after. */
@@ -109,6 +115,11 @@ export function useShop() {
   }, []);
 
   useEffect(() => {
+    if (!signedIn) {
+      setLoading(false);
+      return;
+    }
+
     setApiErrorHandler(setSaveError);
     /* A failed write leaves the screen ahead of the database. Re-reading is
        the only reliable way back: it cannot get an inverse operation wrong. */
@@ -127,7 +138,7 @@ export function useShop() {
     return () => {
       cancelled = true;
     };
-  }, [applyLedger]);
+  }, [signedIn, applyLedger]);
 
   /* ---------------------------------------------------------------- *
    * Derived
