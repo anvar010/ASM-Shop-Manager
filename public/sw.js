@@ -2,7 +2,7 @@
  * Bumping this name is what retires an old cache: the activate handler below
  * deletes every cache that is not the current one.
  */
-const CACHE = "asm-shell-v4";
+const CACHE = "asm-shell-v5";
 
 /*
  * Static assets only. Pages must not be precached: fetching them while signed
@@ -43,15 +43,20 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   /*
-   * Pages come from the network, always. They are behind a login, and one
-   * device can be shared by the owner and staff, so a page cached under one
-   * session must never be replayed to another. Only a redirect or an error
-   * response is cached, and neither is: nothing is written here at all.
+   * Navigations are left entirely alone.
+   *
+   * A worker must never hand back a redirected response for a navigation —
+   * browsers reject it outright. start_url is "/", which redirects to /login
+   * whenever nobody is signed in, so answering that request here made the
+   * installed app fail to load and retry in a loop: images re-fetched and
+   * flickered, and each reload destroyed the focus before a keyboard could
+   * open. A browser tab mostly navigates client-side and so escaped it.
+   *
+   * There is nothing to gain by intercepting anyway. These pages are behind a
+   * login and must always come from the network, which is what the browser
+   * does on its own.
    */
-  if (request.mode === "navigate") {
-    event.respondWith(fetch(request));
-    return;
-  }
+  if (request.mode === "navigate") return;
 
   /*
    * Only content-hashed build output may be served from cache without asking
