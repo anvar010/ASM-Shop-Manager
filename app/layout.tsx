@@ -36,7 +36,8 @@ export const metadata: Metadata = {
   // iOS ignores the manifest for home-screen launches and reads these instead.
   appleWebApp: {
     capable: true,
-    title: "ASM",
+    // iOS reads this for the home-screen label, not the manifest.
+    title: "ASM Shop Manager",
     statusBarStyle: "default",
   },
   other: {
