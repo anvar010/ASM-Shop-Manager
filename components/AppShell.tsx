@@ -112,6 +112,7 @@ export default function AppShell({
                 alt="ASM Daily Fresh"
                 width={900}
                 height={441}
+                sizes="90px"
                 className={styles.logo}
                 priority
               />

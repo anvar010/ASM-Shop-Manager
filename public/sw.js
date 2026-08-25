@@ -2,7 +2,7 @@
  * Bumping this name is what retires an old cache: the activate handler below
  * deletes every cache that is not the current one.
  */
-const CACHE = "asm-shell-v3";
+const CACHE = "asm-shell-v4";
 
 /*
  * Static assets only. Pages must not be precached: fetching them while signed
@@ -65,7 +65,11 @@ self.addEventListener("fetch", (event) => {
    * first time, including a redirect to the login screen.
    */
   const cacheable =
-    url.pathname.startsWith("/_next/static/") || PRECACHE.includes(url.pathname);
+    url.pathname.startsWith("/_next/static/") ||
+    // Optimised images: the query string names the exact file and size, so a
+    // hit is always right, and caching them stops the visible pop-in.
+    url.pathname === "/_next/image" ||
+    PRECACHE.includes(url.pathname);
   if (!cacheable) return;
 
   event.respondWith(

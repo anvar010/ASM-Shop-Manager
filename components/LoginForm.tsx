@@ -51,6 +51,7 @@ export default function LoginForm() {
             alt=""
             width={735}
             height={199}
+            sizes="(max-width: 420px) 100vw, 380px"
             className={c.bannerImage}
             aria-hidden="true"
             priority
@@ -63,6 +64,7 @@ export default function LoginForm() {
             alt="ASM Daily Fresh"
             width={900}
             height={441}
+            sizes="130px"
             className={c.logo}
             priority
           />
@@ -84,7 +86,6 @@ export default function LoginForm() {
             autoCorrect="off"
             spellCheck={false}
             required
-            autoFocus
           />
         </label>
 
