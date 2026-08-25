@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "ASM Daily Fresh — Shop Manager",
-    short_name: "ASM Shop Manager",
+    short_name: "ASM Shop",
     description:
       "Daily bills, expenses, wholesale purchases and credit customers for a small shop.",
     start_url: "/",

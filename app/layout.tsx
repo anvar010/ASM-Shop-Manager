@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     // iOS reads this for the home-screen label, not the manifest.
-    title: "ASM Shop Manager",
+    title: "ASM Shop",
     statusBarStyle: "default",
   },
   other: {
