@@ -8,6 +8,7 @@ import c from "./ExpensesTab.module.css";
 import { IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function ExpensesTab({ shop }: { shop: Shop }) {
+  const editing = shop.editingExpenseId !== null;
   return (
     <div className={c.layout}>
       <div className={c.col} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -80,10 +81,15 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
               );
             })}
           </div>
-          <button type="button" className={s.darkButton} onClick={shop.addExpense}>
-            <IconPlus size={16} color="#fff" />
-            Add Expense
+          <button type="button" className={s.darkButton} onClick={shop.saveExpense}>
+            {editing ? <IconPencil size={14} color="#fff" /> : <IconPlus size={16} color="#fff" />}
+            {editing ? "Save Changes" : "Add Expense"}
           </button>
+          {editing && (
+            <button type="button" className={c.formCancel} onClick={shop.resetExpenseForm}>
+              Cancel edit
+            </button>
+          )}
         </section>
       </div>
 

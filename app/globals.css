@@ -64,8 +64,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * Every anchor in this app is a control — a tab, the logo, a back link — not a
+ * link inside prose. Buttons get a reset just below; anchors need the same, or
+ * a Link styled as a button arrives wearing the browser's underline.
+ */
 a {
   color: var(--primary);
+  text-decoration: none;
 }
 
 a:hover {

@@ -4,13 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
 import { buildPeriod, PERIOD_META } from "./periods";
-import { api, loadLedger, setApiErrorHandler } from "./api";
-import {
-  DAY_OPTIONS,
-  dateKeyOf,
-  dayBack,
-  TODAY_KEY,
-} from "./seed";
+import { api, loadLedger, setApiErrorHandler, setDesyncHandler } from "./api";
+import { dateKeyOf, dayBack, dayOptions, todayKey } from "./seed";
 import type {
   Bill,
   CategoryId,
@@ -33,23 +28,39 @@ export function useShop() {
   const [activeTab, setActiveTab] = useState<TabId>("bills");
   /* The ledger lives in the database; this mirrors it so every derived figure
      stays synchronous. Writes update the mirror first and persist after. */
+  /* Re-read at midnight so an app left open overnight starts filing sales
+     under the new day instead of yesterday's. */
+  const [today, setToday] = useState(todayKey);
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = todayKey();
+      setToday((prev) => (prev === now ? prev : now));
+    }, 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const DAY_OPTIONS = useMemo(() => dayOptions(), [today]);
+
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodId>("today");
 
   const [bills, setBills] = useState<Bill[]>([]);
-  const [selectedDate, setSelectedDate] = useState(TODAY_KEY);
+  const [selectedDate, setSelectedDate] = useState(todayKey);
   const [formAmount, setFormAmount] = useState("");
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState<CategoryId>("groceries");
   const [formMode, setFormMode] = useState<PaymentModeId>("cash");
   const [formCustomer, setFormCustomer] = useState("");
+  /** Set while the bill form is changing an existing sale rather than adding one. */
+  const [editingBillId, setEditingBillId] = useState<string | null>(null);
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expAmount, setExpAmount] = useState("");
   const [expDesc, setExpDesc] = useState("");
   const [expCategory, setExpCategory] = useState<ExpenseCategoryId>("supplier");
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchaseSearch, setPurchaseSearch] = useState("");
@@ -89,40 +100,54 @@ export function useShop() {
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState("");
 
+  const applyLedger = useCallback((data: Awaited<ReturnType<typeof loadLedger>>) => {
+    if (!data) return false;
+    setBills(data.bills);
+    setExpenses(data.expenses);
+    setPurchases(data.purchases);
+    return true;
+  }, []);
+
   useEffect(() => {
     setApiErrorHandler(setSaveError);
+    /* A failed write leaves the screen ahead of the database. Re-reading is
+       the only reliable way back: it cannot get an inverse operation wrong. */
+    setDesyncHandler(() => {
+      loadLedger().then(applyLedger);
+    });
+
     let cancelled = false;
     loadLedger().then((data) => {
       if (cancelled) return;
-      if (!data) setLoadError("Could not load your data. Check the connection and reload.");
-      else {
-        setBills(data.bills);
-        setExpenses(data.expenses);
-        setPurchases(data.purchases);
+      if (!applyLedger(data)) {
+        setLoadError("Could not load your data. Check the connection and reload.");
       }
       setLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [applyLedger]);
 
   /* ---------------------------------------------------------------- *
    * Derived
    * ---------------------------------------------------------------- */
 
-  const todaysBills = useMemo(() => bills.filter((b) => b.date === TODAY_KEY), [bills]);
+  const todaysBills = useMemo(() => bills.filter((b) => b.date === today), [bills, today]);
   const viewBills = useMemo(
     () => bills.filter((b) => b.date === selectedDate),
     [bills, selectedDate],
   );
-  const isTodayView = selectedDate === TODAY_KEY;
+  const isTodayView = selectedDate === today;
 
   const todayTotal = useMemo(() => todaysBills.reduce((s, b) => s + b.amount, 0), [todaysBills]);
   const viewTotal = useMemo(() => viewBills.reduce((s, b) => s + b.amount, 0), [viewBills]);
   /* Expenses carry a date now, so the profit figure must scope to today
      rather than summing every expense ever recorded. */
-  const todaysExpenses = useMemo(() => expenses.filter((e) => e.date === TODAY_KEY), [expenses]);
+  const todaysExpenses = useMemo(
+    () => expenses.filter((e) => e.date === today),
+    [expenses, today],
+  );
   const expenseTotal = useMemo(
     () => todaysExpenses.reduce((s, e) => s + e.amount, 0),
     [todaysExpenses],
@@ -344,11 +369,11 @@ export function useShop() {
     if (ledgerRange === "custom") {
       return { from: ledgerFromDate, to: ledgerToDate || ledgerFromDate };
     }
-    if (ledgerRange === "today") return { from: TODAY_KEY, to: "" };
+    if (ledgerRange === "today") return { from: today, to: "" };
     if (ledgerRange === "week") return { from: dateKeyOf(dayBack(6)), to: "" };
     if (ledgerRange === "month") return { from: dateKeyOf(dayBack(27)), to: "" };
     return { from: "", to: "" };
-  }, [ledgerRange, ledgerFromDate, ledgerToDate]);
+  }, [today, ledgerRange, ledgerFromDate, ledgerToDate]);
 
   /** Days that carry at least one bill, for the calendar's markers. */
   const purchaseDates = useMemo(() => new Set(purchases.map((p) => p.date)), [purchases]);
@@ -370,11 +395,11 @@ export function useShop() {
     if (creditRange === "custom") {
       return { from: creditFromDate, to: creditToDate || creditFromDate };
     }
-    if (creditRange === "today") return { from: TODAY_KEY, to: "" };
+    if (creditRange === "today") return { from: today, to: "" };
     if (creditRange === "week") return { from: dateKeyOf(dayBack(6)), to: "" };
     if (creditRange === "month") return { from: dateKeyOf(dayBack(27)), to: "" };
     return { from: "", to: "" };
-  }, [creditRange, creditFromDate, creditToDate]);
+  }, [today, creditRange, creditFromDate, creditToDate]);
 
   /** Every bill taken on credit, newest first, with what is left to collect. */
   const creditBills = useMemo(
@@ -438,7 +463,7 @@ export function useShop() {
       .map((g) => {
         const lastDay = DAY_OPTIONS.find((d) => d.key === g.lastDate);
         const sinceDay = DAY_OPTIONS.find((d) => d.key === g.owingSince);
-        const age = g.owingSince ? daysBetween(g.owingSince, TODAY_KEY) : 0;
+        const age = g.owingSince ? daysBetween(g.owingSince, today) : 0;
         return {
           ...g,
           settled: g.owed === 0,
@@ -463,7 +488,7 @@ export function useShop() {
               catColor: cat.color,
               dayLabel: day ? `${day.short}, ${day.sub}` : formatDateKey(b.date),
               ageLabel: (() => {
-                const n = daysBetween(b.date, TODAY_KEY);
+                const n = daysBetween(b.date, today);
                 return n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`;
               })(),
               // When the last repayment cleared it, for the settled stamp.
@@ -486,7 +511,7 @@ export function useShop() {
           }),
         };
       });
-  }, [creditBills, creditSearch, creditWindow, creditOwingOnly]);
+  }, [today, creditBills, creditSearch, creditWindow, creditOwingOnly]);
 
   /** Everyone who has ever taken credit, for the bill form's name lookup. */
   const customerStats = useMemo(() => {
@@ -673,7 +698,15 @@ export function useShop() {
     });
   }, []);
 
-  const addBill = useCallback(() => {
+  const resetBillForm = useCallback(() => {
+    setEditingBillId(null);
+    setFormAmount("");
+    setFormDesc("");
+    setFormCustomer("");
+  }, []);
+
+  /** Adds a sale, or saves the one being edited. */
+  const saveBill = useCallback(() => {
     const amt = parseFloat(formAmount);
     if (!amt || amt <= 0) return;
     /* Reuse a known customer's own spelling, so "ravi" joins "Ravi" rather
@@ -686,9 +719,29 @@ export function useShop() {
       );
       return known ? known.customer : typed;
     };
+
+    if (editingBillId) {
+      const current = bills.find((b) => b.id === editingBillId);
+      if (!current) return;
+      const next: Bill = {
+        ...current,
+        desc: formDesc.trim() || "Sale",
+        category: formCategory,
+        amount: amt,
+        mode: formMode,
+        ...(formMode === "credit"
+          ? { customer: creditCustomerName() }
+          : { customer: undefined, creditPayments: undefined }),
+      };
+      setBills((prev) => prev.map((b) => (b.id === editingBillId ? next : b)));
+      api.updateBill(next);
+      resetBillForm();
+      return;
+    }
+
     const bill: Bill = {
       id: newId("b"),
-      date: TODAY_KEY,
+      date: today,
       desc: formDesc.trim() || "Sale",
       category: formCategory,
       amount: amt,
@@ -698,22 +751,36 @@ export function useShop() {
     };
     setBills((prev) => [bill, ...prev]);
     api.addBill(bill);
-    setFormAmount("");
-    setFormDesc("");
-    setFormCustomer("");
-  }, [formAmount, formDesc, formCategory, formMode, formCustomer, customerStats]);
+    resetBillForm();
+  }, [
+    today,
+    editingBillId,
+    bills,
+    formAmount,
+    formDesc,
+    formCategory,
+    formMode,
+    formCustomer,
+    customerStats,
+    resetBillForm,
+  ]);
 
-  const deleteBill = useCallback((id: string) => {
-    setBills((prev) => prev.filter((b) => b.id !== id));
-    api.deleteBill(id);
-  }, []);
+  const deleteBill = useCallback(
+    (id: string) => {
+      setBills((prev) => prev.filter((b) => b.id !== id));
+      api.deleteBill(id);
+      if (editingBillId === id) resetBillForm();
+    },
+    [editingBillId, resetBillForm],
+  );
 
+  /* Loads a sale into the form for editing. Nothing is removed until the
+     change is saved, so abandoning an edit cannot lose the bill. */
   const editBill = useCallback(
     (id: string) => {
       const bill = bills.find((b) => b.id === id);
       if (!bill) return;
-      setBills((prev) => prev.filter((b) => b.id !== id));
-      api.deleteBill(id);
+      setEditingBillId(id);
       setFormAmount(String(bill.amount));
       setFormDesc(bill.desc);
       setFormCategory(bill.category);
@@ -723,12 +790,35 @@ export function useShop() {
     [bills],
   );
 
-  const addExpense = useCallback(() => {
+  const resetExpenseForm = useCallback(() => {
+    setEditingExpenseId(null);
+    setExpAmount("");
+    setExpDesc("");
+  }, []);
+
+  /** Adds an expense, or saves the one being edited. */
+  const saveExpense = useCallback(() => {
     const amt = parseFloat(expAmount);
     if (!amt || amt <= 0) return;
+
+    if (editingExpenseId) {
+      const current = expenses.find((e) => e.id === editingExpenseId);
+      if (!current) return;
+      const next: Expense = {
+        ...current,
+        desc: expDesc.trim() || "Expense",
+        category: expCategory,
+        amount: amt,
+      };
+      setExpenses((prev) => prev.map((e) => (e.id === editingExpenseId ? next : e)));
+      api.updateExpense(next);
+      resetExpenseForm();
+      return;
+    }
+
     const expense: Expense = {
       id: newId("e"),
-      date: TODAY_KEY,
+      date: today,
       desc: expDesc.trim() || "Expense",
       category: expCategory,
       amount: amt,
@@ -736,21 +826,24 @@ export function useShop() {
     };
     setExpenses((prev) => [expense, ...prev]);
     api.addExpense(expense);
-    setExpAmount("");
-    setExpDesc("");
-  }, [expAmount, expDesc, expCategory]);
+    resetExpenseForm();
+  }, [today, editingExpenseId, expenses, expAmount, expDesc, expCategory, resetExpenseForm]);
 
-  const deleteExpense = useCallback((id: string) => {
-    setExpenses((prev) => prev.filter((e) => e.id !== id));
-    api.deleteExpense(id);
-  }, []);
+  const deleteExpense = useCallback(
+    (id: string) => {
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+      api.deleteExpense(id);
+      if (editingExpenseId === id) resetExpenseForm();
+    },
+    [editingExpenseId, resetExpenseForm],
+  );
 
+  /* Loads an expense into the form. Nothing is removed until it is saved. */
   const editExpense = useCallback(
     (id: string) => {
       const exp = expenses.find((e) => e.id === id);
       if (!exp) return;
-      setExpenses((prev) => prev.filter((e) => e.id !== id));
-      api.deleteExpense(id);
+      setEditingExpenseId(id);
       setExpAmount(String(exp.amount));
       setExpDesc(exp.desc);
       setExpCategory(exp.category);
@@ -777,7 +870,7 @@ export function useShop() {
     const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
     const purchase: Purchase = {
       id: newId("w"),
-      date: TODAY_KEY,
+      date: today,
       supplier: known ? known.supplier : typed,
       item: purchaseItem.trim() || "Stock",
       amount: amt,
@@ -789,6 +882,7 @@ export function useShop() {
     api.addPurchase(purchase);
     resetPurchaseForm();
   }, [
+    today,
     supplierStats,
     purchaseSupplier,
     purchaseItem,
@@ -823,25 +917,23 @@ export function useShop() {
     const known = supplierStats.find((r) => r.supplier.toLowerCase() === typed.toLowerCase());
     const typedPaid = parseFloat(editPaid);
     const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
-    setPurchases((prev) =>
-      prev.map((p) => {
-        if (p.id !== editingPurchaseId) return p;
-        const next = {
-          ...p,
-          supplier: known ? known.supplier : typed,
-          item: editItem.trim() || "Stock",
-          amount: amt,
-          // Later part-payments stand; the upfront figure absorbs the rest.
-          paidUpfront: Math.max(0, Math.min(paid, amt - editingPaidLater)),
-        };
-        api.updatePurchase(next);
-        return next;
-      }),
-    );
+    const current = purchases.find((p) => p.id === editingPurchaseId);
+    if (!current) return;
+    const next = {
+      ...current,
+      supplier: known ? known.supplier : typed,
+      item: editItem.trim() || "Stock",
+      amount: amt,
+      // Later part-payments stand; the upfront figure absorbs the rest.
+      paidUpfront: Math.max(0, Math.min(paid, amt - editingPaidLater)),
+    };
+    setPurchases((prev) => prev.map((p) => (p.id === editingPurchaseId ? next : p)));
+    api.updatePurchase(next);
     setEditingPurchaseId(null);
   }, [
     editingPurchaseId,
     editingPaidLater,
+    purchases,
     supplierStats,
     editSupplier,
     editItem,
@@ -899,41 +991,64 @@ export function useShop() {
     setSettleAmount("");
   }, []);
 
-  /** Records money a customer paid back. Never collects more than is owed. */
-  const settleCredit = useCallback((id: string, amount: number) => {
-    if (!amount || amount <= 0) return;
-    setBills((prev) =>
-      prev.map((b) => {
-        if (b.id !== id) return b;
-        const log = b.creditPayments ?? [];
-        const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
-        const take = Math.min(amount, owed);
-        if (take <= 0) return b;
-        const payment = { id: newId("cp"), date: TODAY_KEY, amount: take };
-        api.settleBill({ ...payment, billId: b.id });
-        return { ...b, creditPayments: [...log, payment] };
-      }),
-    );
-    setSettlingId(null);
-    setSettleAmount("");
-  }, []);
+  /*
+   * Records money a customer paid back. Never collects more than is owed.
+   *
+   * The row is worked out before state is touched: a side effect inside a
+   * setState updater runs again whenever React re-invokes it, which under
+   * StrictMode meant one ₹200 repayment was written to the database twice.
+   */
+  const settleCredit = useCallback(
+    (id: string, amount: number) => {
+      if (!amount || amount <= 0) return;
+      const bill = bills.find((b) => b.id === id);
+      if (!bill) return;
+      const log = bill.creditPayments ?? [];
+      const owed = Math.max(0, bill.amount - log.reduce((sum, p) => sum + p.amount, 0));
+      const take = Math.min(amount, owed);
+      if (take <= 0) return;
+
+      const payment = { id: newId("cp"), date: today, amount: take };
+      setBills((prev) =>
+        prev.map((b) =>
+          b.id === id ? { ...b, creditPayments: [...(b.creditPayments ?? []), payment] } : b,
+        ),
+      );
+      api.settleBill({ ...payment, billId: id });
+      setSettlingId(null);
+      setSettleAmount("");
+    },
+    [bills, today],
+  );
 
   /** Clears everything one person owes, across all their credit bills. */
-  const settleAllFor = useCallback((customer: string) => {
-    setBills((prev) =>
-      prev.map((b) => {
-        if (b.mode !== "credit" || (b.customer || "Unnamed") !== customer) return b;
-        const log = b.creditPayments ?? [];
-        const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
-        if (owed <= 0) return b;
-        const payment = { id: newId("cp"), date: TODAY_KEY, amount: owed };
-        api.settleBill({ ...payment, billId: b.id });
-        return { ...b, creditPayments: [...log, payment] };
-      }),
-    );
-    setSettlingId(null);
-    setSettleAmount("");
-  }, []);
+  const settleAllFor = useCallback(
+    (customer: string) => {
+      const owing = bills
+        .filter((b) => b.mode === "credit" && (b.customer || "Unnamed") === customer)
+        .map((b) => {
+          const log = b.creditPayments ?? [];
+          const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
+          return { billId: b.id, owed };
+        })
+        .filter((x) => x.owed > 0)
+        .map((x) => ({ billId: x.billId, id: newId("cp"), date: today, amount: x.owed }));
+      if (owing.length === 0) return;
+
+      setBills((prev) =>
+        prev.map((b) => {
+          const pay = owing.find((o) => o.billId === b.id);
+          if (!pay) return b;
+          const { billId: _billId, ...payment } = pay;
+          return { ...b, creditPayments: [...(b.creditPayments ?? []), payment] };
+        }),
+      );
+      owing.forEach(({ billId, ...payment }) => api.settleBill({ ...payment, billId }));
+      setSettlingId(null);
+      setSettleAmount("");
+    },
+    [bills, today],
+  );
 
   const pickCreditDate = useCallback(
     (key: string) => {
@@ -985,28 +1100,28 @@ export function useShop() {
   const payPurchase = useCallback(
     (id: string, amount: number) => {
       if (!amount || amount <= 0) return;
+      const purchase = purchases.find((p) => p.id === id);
+      if (!purchase) return;
+      const paid = purchase.paidUpfront + purchase.payments.reduce((s2, p) => s2 + p.amount, 0);
+      const owed = Math.max(0, purchase.amount - paid);
+      const take = Math.min(amount, owed);
+      if (take <= 0) return;
+
+      const payment = { id: newId("wp"), date: today, amount: take };
       setPurchases((prev) =>
-        prev.map((p) => {
-          if (p.id !== id) return p;
-          const paid = p.paidUpfront + p.payments.reduce((s2, pay) => s2 + pay.amount, 0);
-          const owed = Math.max(0, p.amount - paid);
-          const pay = Math.min(amount, owed);
-          if (pay <= 0) return p;
-          const payment = { id: newId("wp"), date: TODAY_KEY, amount: pay };
-          api.payPurchase({ ...payment, purchaseId: p.id });
-          return { ...p, payments: [...p.payments, payment] };
-        }),
+        prev.map((p) => (p.id === id ? { ...p, payments: [...p.payments, payment] } : p)),
       );
+      api.payPurchase({ ...payment, purchaseId: id });
       setPayingId(null);
       setPayAmount("");
     },
-    [],
+    [purchases, today],
   );
 
   const goAddBill = useCallback(() => {
     setActiveTab("bills");
-    setSelectedDate(TODAY_KEY);
-  }, []);
+    setSelectedDate(today);
+  }, [today]);
 
   const goAddExpense = useCallback(() => setActiveTab("expenses"), []);
 
@@ -1071,7 +1186,9 @@ export function useShop() {
     customerExact,
     creditTotal,
     pressPad,
-    addBill,
+    editingBillId,
+    saveBill,
+    resetBillForm,
     deleteBill,
     editBill,
 
@@ -1083,7 +1200,9 @@ export function useShop() {
     setExpDesc,
     expCategory,
     setExpCategory,
-    addExpense,
+    editingExpenseId,
+    saveExpense,
+    resetExpenseForm,
     deleteExpense,
     editExpense,
 

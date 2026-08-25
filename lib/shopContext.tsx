@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext } from "react";
 import { useShop, type Shop } from "./useShop";
 import type { SessionUser } from "./session-token";
 
@@ -12,16 +12,20 @@ import type { SessionUser } from "./session-token";
 const ShopContext = createContext<Shop | null>(null);
 const UserContext = createContext<SessionUser | null>(null);
 
-export function ShopProvider({ children }: { children: React.ReactNode }) {
+/*
+ * The user is read from the session cookie on the server and passed in, rather
+ * than fetched after mount. Fetching meant the first render always assumed the
+ * lesser role, so an owner watched the nav change under them — and any gating
+ * written against it was briefly wrong.
+ */
+export function ShopProvider({
+  user,
+  children,
+}: {
+  user: SessionUser | null;
+  children: React.ReactNode;
+}) {
   const shop = useShop();
-  const [user, setUser] = useState<SessionUser | null>(null);
-
-  useEffect(() => {
-    fetch("/api/auth/me")
-      .then((r) => (r.ok ? r.json() : { user: null }))
-      .then((d) => setUser(d.user))
-      .catch(() => setUser(null));
-  }, []);
 
   return (
     <UserContext.Provider value={user}>
@@ -30,7 +34,7 @@ export function ShopProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Null until /api/auth/me answers, so guard on it before gating anything. */
+/** The signed-in user, known from the first render. */
 export function useUser(): SessionUser | null {
   return useContext(UserContext);
 }

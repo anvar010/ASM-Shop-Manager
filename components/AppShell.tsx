@@ -154,7 +154,7 @@ export default function AppShell({
           silently, or the shop is trusting a figure the database never got. */}
       {shop.saveError && (
         <div className={styles.toast} role="alert">
-          <span>{shop.saveError} — reload to see what was actually saved.</span>
+          <span>{shop.saveError}. The screen has been put back to what is saved.</span>
           <button type="button" className={styles.toastClose} onClick={shop.dismissSaveError}>
             Dismiss
           </button>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MONTHS_SHORT, formatDateKey } from "@/lib/format";
-import { dateKeyOf, TODAY_KEY } from "@/lib/seed";
+import { dateKeyOf, todayKey } from "@/lib/seed";
 import k from "./CalendarFilter.module.css";
 import { IconChevron } from "./Icons";
 
@@ -36,6 +36,7 @@ export default function CalendarFilter({
   onDone: () => void;
 }) {
   const today = new Date();
+  const todayIso = todayKey();
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
 
   const cells = monthCells(cursor.y, cursor.m);
@@ -98,7 +99,7 @@ export default function CalendarFilter({
                   k.day,
                   inRange ? k.dayInRange : "",
                   isEdge ? k.dayEdge : "",
-                  key === TODAY_KEY ? k.dayToday : "",
+                  key === todayIso ? k.dayToday : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}

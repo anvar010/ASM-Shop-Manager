@@ -10,13 +10,14 @@ import { IconBackspace, IconBill, IconPencil, IconPlus, IconTrash } from "./Icon
 
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
+  const editing = shop.editingBillId !== null;
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
 
   const form = (
     <section className={s.card}>
       <div className={s.cardTitle} style={{ marginBottom: 14 }}>
-        Add a bill
+        {editing ? "Edit bill" : "Add a bill"}
       </div>
 
       <div className={c.formGrid}>
@@ -176,10 +177,15 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           )}
 
-          <button type="button" className={s.primaryButton} onClick={shop.addBill}>
-            <IconPlus size={16} color="#fff" />
-            Add Bill
+          <button type="button" className={s.primaryButton} onClick={shop.saveBill}>
+            {editing ? <IconPencil size={14} color="#fff" /> : <IconPlus size={16} color="#fff" />}
+            {editing ? "Save Changes" : "Add Bill"}
           </button>
+          {editing && (
+            <button type="button" className={c.formCancel} onClick={shop.resetBillForm}>
+              Cancel edit
+            </button>
+          )}
         </div>
       </div>
     </section>
@@ -245,7 +251,12 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         <>
           <div className={c.entriesList} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {shop.billRows.map((b) => (
-              <div key={b.id} className={`${s.cardSm} ${c.billRow}`}>
+              <div
+                key={b.id}
+                className={`${s.cardSm} ${c.billRow} ${
+                  shop.editingBillId === b.id ? c.billRowEditing : ""
+                }`}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
                   <span
                     style={{

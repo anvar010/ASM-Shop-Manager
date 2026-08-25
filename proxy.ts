@@ -4,7 +4,7 @@ import { readSession, SESSION_COOKIE } from "@/lib/session-token";
 /** Pages a staff account may not open, whatever they type in the address bar. */
 const ADMIN_ONLY = ["/credits", "/overview-report"];
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const user = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
 
@@ -15,6 +15,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!user) {
+    /* An API call must be told plainly that the session is gone. Redirecting
+       it lands fetch() on the login page's HTML with a 200, which reads as
+       success and fails only when the body will not parse as JSON. */
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
+    }
     const to = new URL("/login", request.url);
     // Come back to where they were headed once they are through.
     if (pathname !== "/") to.searchParams.set("next", pathname + search);

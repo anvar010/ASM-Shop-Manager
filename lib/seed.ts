@@ -22,15 +22,24 @@ export function dayBack(n: number): Date {
   return d;
 }
 
-export const TODAY_KEY = dateKeyOf(new Date());
+/*
+ * Computed on call, never cached at module load: a shop leaves this open all
+ * day, and a constant captured at import would keep filing tomorrow's sales
+ * under today's date after midnight.
+ */
+export function todayKey(): string {
+  return dateKeyOf(new Date());
+}
 
 /** The seven days offered by the Bills date filter, today first. */
-export const DAY_OPTIONS: DayOption[] = Array.from({ length: 7 }, (_, i) => {
-  const d = dayBack(i);
-  return {
-    key: dateKeyOf(d),
-    short: i === 0 ? "Today" : i === 1 ? "Yest" : WEEKDAYS_SHORT[d.getDay()],
-    sub: formatDayMonth(d),
-    long: i === 0 ? "today" : i === 1 ? "yesterday" : formatLongDate(d),
-  };
-});
+export function dayOptions(): DayOption[] {
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = dayBack(i);
+    return {
+      key: dateKeyOf(d),
+      short: i === 0 ? "Today" : i === 1 ? "Yest" : WEEKDAYS_SHORT[d.getDay()],
+      sub: formatDayMonth(d),
+      long: i === 0 ? "today" : i === 1 ? "yesterday" : formatLongDate(d),
+    };
+  });
+}

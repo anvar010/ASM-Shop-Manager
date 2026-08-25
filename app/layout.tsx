@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ShopProvider } from "@/lib/shopContext";
+import { currentUser } from "@/lib/session";
 import ServiceWorker from "@/components/ServiceWorker";
 
 const manrope = Manrope({
@@ -55,11 +56,13 @@ export const viewport: Viewport = {
   themeColor: "#f7f7f5",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const user = await currentUser();
+
   return (
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
       <body>
-        <ShopProvider>{children}</ShopProvider>
+        <ShopProvider user={user}>{children}</ShopProvider>
         <ServiceWorker />
       </body>
     </html>

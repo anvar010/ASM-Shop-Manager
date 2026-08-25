@@ -9,22 +9,45 @@ import type { Bill, Expense, Purchase } from "./types";
  */
 
 let onError: ((message: string) => void) | null = null;
+let onDesync: (() => void) | null = null;
 
 export function setApiErrorHandler(handler: (message: string) => void) {
   onError = handler;
 }
 
+/*
+ * Called when a write fails after the screen has already moved on. Rather than
+ * inverting each operation by hand — which gets it wrong the moment two writes
+ * overlap — the ledger is re-read, so what is shown is whatever the database
+ * actually holds.
+ */
+export function setDesyncHandler(handler: () => void) {
+  onDesync = handler;
+}
+
+/** A dead session cannot be retried out of; send them to sign in again. */
+function signedOut(res: Response): boolean {
+  if (res.status !== 401) return false;
+  const to = new URL("/login", window.location.origin);
+  to.searchParams.set("next", window.location.pathname + window.location.search);
+  window.location.href = to.toString();
+  return true;
+}
+
 async function send(path: string, init: RequestInit, what: string) {
   try {
     const res = await fetch(path, init);
+    if (signedOut(res)) return false;
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       onError?.(body.error ?? `Could not save ${what}`);
+      onDesync?.();
       return false;
     }
     return true;
   } catch {
     onError?.(`Could not reach the server to save ${what}`);
+    onDesync?.();
     return false;
   }
 }
@@ -42,6 +65,7 @@ export async function loadLedger(): Promise<{
 } | null> {
   try {
     const res = await fetch("/api/data", { cache: "no-store" });
+    if (signedOut(res)) return null;
     if (!res.ok) {
       onError?.("Could not load your data");
       return null;
@@ -55,12 +79,16 @@ export async function loadLedger(): Promise<{
 
 export const api = {
   addBill: (bill: Bill) => send("/api/bills", json(bill), "the bill"),
+  updateBill: (bill: Bill) =>
+    send("/api/bills", { ...json(bill), method: "PATCH" }, "the changes"),
   deleteBill: (id: string) =>
     send(`/api/bills?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
   settleBill: (p: { id: string; billId: string; date: string; amount: number }) =>
     send("/api/bills/settle", json(p), "the payment"),
 
   addExpense: (expense: Expense) => send("/api/expenses", json(expense), "the expense"),
+  updateExpense: (expense: Expense) =>
+    send("/api/expenses", { ...json(expense), method: "PATCH" }, "the changes"),
   deleteExpense: (id: string) =>
     send(`/api/expenses?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
 

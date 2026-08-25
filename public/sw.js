@@ -2,17 +2,18 @@
  * Bumping this name is what retires an old cache: the activate handler below
  * deletes every cache that is not the current one.
  */
-const CACHE = "asm-shell-v1";
+const CACHE = "asm-shell-v3";
 
-/* The routes and icons worth having before the first offline launch. */
+/*
+ * Static assets only. Pages must not be precached: fetching them while signed
+ * out follows the redirect to /login and stores that under the page's own key,
+ * so the app would later serve a login screen from cache to a signed-in user.
+ */
 const PRECACHE = [
-  "/",
-  "/purchases",
-  "/credits",
-  "/overview-report",
   "/icon-192.png",
   "/icon-512.png",
   "/apple-touch-icon.png",
+  "/logo-mark.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -41,22 +42,32 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  /* Pages come from the network first, so a deploy is never served stale;
-     the cache is only the fallback when the network is unreachable. */
+  /*
+   * Pages come from the network, always. They are behind a login, and one
+   * device can be shared by the owner and staff, so a page cached under one
+   * session must never be replayed to another. Only a redirect or an error
+   * response is cached, and neither is: nothing is written here at all.
+   */
   if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(request, copy));
-          return response;
-        })
-        .catch(() => caches.match(request).then((hit) => hit || caches.match("/"))),
-    );
+    event.respondWith(fetch(request));
     return;
   }
 
-  /* Build output is content-hashed, so a hit is always the right file. */
+  /*
+   * Only content-hashed build output may be served from cache without asking
+   * the network: its URL changes whenever the file does, so a hit is always
+   * the right file.
+   *
+   * Everything else goes straight to the network. That matters most for the
+   * payloads behind in-app links: tapping a <Link> is not a "navigate"
+   * request, it is an ordinary fetch of ?_rsc=..., so it would otherwise land
+   * in the cache-first branch — pinning a page to whatever was returned the
+   * first time, including a redirect to the login screen.
+   */
+  const cacheable =
+    url.pathname.startsWith("/_next/static/") || PRECACHE.includes(url.pathname);
+  if (!cacheable) return;
+
   event.respondWith(
     caches.match(request).then(
       (hit) =>
