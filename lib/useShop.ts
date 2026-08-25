@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
-import { formatDateKey, formatINR, formatTime } from "./format";
+import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
 import { buildPeriod, PERIOD_META } from "./periods";
 import {
   DAY_OPTIONS,
@@ -373,16 +373,22 @@ export function useShop() {
         owed: number;
         taken: number;
         lastDate: string;
+        owingSince: string;
       }
     >();
     inWindow.forEach((b) => {
       const name = b.customer || "Unnamed";
       const g =
-        byName.get(name) ?? { customer: name, rows: [], owed: 0, taken: 0, lastDate: "" };
+        byName.get(name) ??
+        { customer: name, rows: [], owed: 0, taken: 0, lastDate: "", owingSince: "" };
       g.rows.push(b);
       g.owed += b.balance;
       g.taken += b.amount;
       if (b.date > g.lastDate) g.lastDate = b.date;
+      // The oldest bill still carrying a balance is what "owing since" means.
+      if (b.balance > 0 && (g.owingSince === "" || b.date < g.owingSince)) {
+        g.owingSince = b.date;
+      }
       byName.set(name, g);
     });
 
@@ -397,9 +403,17 @@ export function useShop() {
       .sort((a, b) => (b.owed !== a.owed ? b.owed - a.owed : b.lastDate < a.lastDate ? -1 : 1))
       .map((g) => {
         const lastDay = DAY_OPTIONS.find((d) => d.key === g.lastDate);
+        const sinceDay = DAY_OPTIONS.find((d) => d.key === g.owingSince);
+        const age = g.owingSince ? daysBetween(g.owingSince, TODAY_KEY) : 0;
         return {
           ...g,
           settled: g.owed === 0,
+          owingSinceLabel: g.owingSince
+            ? sinceDay
+              ? sinceDay.sub
+              : formatDateKey(g.owingSince)
+            : "",
+          owingAgeLabel: age === 0 ? "today" : age === 1 ? "1 day" : `${age} days`,
           owedLabel: formatINR(g.owed),
           takenLabel: formatINR(g.taken),
           lastLabel: lastDay ? `${lastDay.short}, ${lastDay.sub}` : formatDateKey(g.lastDate),
@@ -414,6 +428,18 @@ export function useShop() {
               catLabel: cat.label,
               catColor: cat.color,
               dayLabel: day ? `${day.short}, ${day.sub}` : formatDateKey(b.date),
+              ageLabel: (() => {
+                const n = daysBetween(b.date, TODAY_KEY);
+                return n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`;
+              })(),
+              // When the last repayment cleared it, for the settled stamp.
+              settledOn: (() => {
+                const log = b.creditPayments ?? [];
+                if (log.length === 0 || b.balance > 0) return "";
+                const key = log[log.length - 1].date;
+                const d = DAY_OPTIONS.find((x) => x.key === key);
+                return d ? `${d.short}, ${d.sub}` : formatDateKey(key);
+              })(),
               payLog: (b.creditPayments ?? []).map((p) => {
                 const payDay = DAY_OPTIONS.find((d) => d.key === p.date);
                 return {

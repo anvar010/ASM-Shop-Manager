@@ -113,6 +113,18 @@
   margin-top: 2px;
 }
 
+/* How long the money has been outstanding, the figure worth chasing on. */
+.personAge {
+  display: inline-block;
+  margin-top: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .personRight {
   flex-shrink: 0;
   display: flex;
@@ -305,6 +317,10 @@
   color: var(--text-faint);
   font-weight: 600;
   margin-top: 2px;
+}
+
+.billMeta:first-of-type {
+  color: var(--text-muted);
 }
 
 .billAmount {

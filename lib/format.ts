@@ -64,6 +64,16 @@ export function formatDateKey(key: string): string {
   return month ? `${parseInt(parts[2], 10)} ${month}` : key;
 }
 
+/** Whole days between two YYYY-MM-DD keys. Parsed by hand, so it agrees on
+ *  server and client and is unaffected by daylight saving. */
+export function daysBetween(fromKey: string, toKey: string): number {
+  const a = fromKey.split("-").map(Number);
+  const b = toKey.split("-").map(Number);
+  if (a.length !== 3 || b.length !== 3) return 0;
+  const ms = Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2]);
+  return Math.round(ms / 86400000);
+}
+
 /** "Saturday, 24 Aug" */
 export function formatLongDate(d: Date): string {
   return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;

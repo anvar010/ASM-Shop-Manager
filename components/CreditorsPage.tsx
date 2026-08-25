@@ -140,8 +140,12 @@ export default function CreditorsPage() {
                   <span className={c.personText}>
                     <span className={`${s.truncate} ${c.personName}`}>{g.customer}</span>
                     <span className={c.personMeta}>
-                      {g.rows.length} {g.rows.length === 1 ? "bill" : "bills"} · last {g.lastLabel}
+                      {g.rows.length} {g.rows.length === 1 ? "bill" : "bills"}
+                      {g.settled ? ` · last ${g.lastLabel}` : ` · owing since ${g.owingSinceLabel}`}
                     </span>
+                    {!g.settled && (
+                      <span className={c.personAge}>Outstanding {g.owingAgeLabel}</span>
+                    )}
                   </span>
                   <span className={c.personRight}>
                     <span className={`num ${g.settled ? c.owedClear : c.owed}`}>
@@ -166,7 +170,10 @@ export default function CreditorsPage() {
                             <div style={{ minWidth: 0, flex: 1 }}>
                               <div className={`${s.truncate} ${c.billDesc}`}>{b.desc}</div>
                               <div className={c.billMeta}>
-                                {b.catLabel} · {b.dayLabel} · {b.time}
+                                Taken {b.dayLabel} · {b.time}
+                              </div>
+                              <div className={c.billMeta}>
+                                {b.catLabel} · {b.ageLabel}
                               </div>
                             </div>
                             <div className={c.billFigures}>
@@ -190,7 +197,9 @@ export default function CreditorsPage() {
                           )}
 
                           {b.settled ? (
-                            <div className={c.settledTag}>Settled</div>
+                            <div className={c.settledTag}>
+                              Settled{b.settledOn ? ` on ${b.settledOn}` : ""}
+                            </div>
                           ) : settling ? (
                             <div className={c.settleRow}>
                               <input
