@@ -1,6 +1,7 @@
+/* Four actions: two abreast on a phone, one row once there is width. */
 .quickRow {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -22,6 +23,19 @@
 
 .quickButton:hover {
   filter: brightness(0.97);
+}
+
+/* Carries a figure, so it needs room the plain actions do not. */
+.quickCredit {
+  border-color: var(--warning-bg);
+  background: var(--warning-bg);
+  color: var(--accent-gold);
+}
+
+.quickBadge {
+  font-size: 12px;
+  color: var(--accent-gold);
+  line-height: 1;
 }
 
 .quickPrimary {
@@ -181,7 +195,7 @@
 
 @media (min-width: 768px) {
   .quickRow {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 16px;
   }

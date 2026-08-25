@@ -52,6 +52,16 @@ export function useShop() {
   /** Custom window picked on the calendar, as YYYY-MM-DD keys. */
   const [ledgerFromDate, setLedgerFromDate] = useState("");
   const [ledgerToDate, setLedgerToDate] = useState("");
+
+  /* Filters for the credit-customers page, kept apart from every other view. */
+  const [creditSearch, setCreditSearch] = useState("");
+  const [creditRange, setCreditRange] = useState<PurchaseRangeId>("all");
+  const [creditFromDate, setCreditFromDate] = useState("");
+  const [creditToDate, setCreditToDate] = useState("");
+  const [creditOwingOnly, setCreditOwingOnly] = useState(true);
+  /** Which credit bill has its settle field open, and what is typed in it. */
+  const [settlingId, setSettlingId] = useState<string | null>(null);
+  const [settleAmount, setSettleAmount] = useState("");
   const [purchaseSupplier, setPurchaseSupplier] = useState("");
   const [purchaseItem, setPurchaseItem] = useState("");
   const [purchaseAmount, setPurchaseAmount] = useState("");
@@ -107,6 +117,49 @@ export function useShop() {
       label: periodStats.total > 0 ? periodStats.trendLabels[best] : "—",
     };
   }, [periodStats, period]);
+
+  /** How the period's takings split across cash, UPI and credit. */
+  const periodPaymentSplit = useMemo(
+    () =>
+      PAYMENT_MODES.map((m) => {
+        const amount = periodStats.list.reduce((sum, b) => (b.mode === m.id ? sum + b.amount : sum), 0);
+        return {
+          ...m,
+          amount,
+          amountLabel: formatINR(amount),
+          pct: periodStats.total > 0 ? Math.round((amount / periodStats.total) * 100) : 0,
+        };
+      }),
+    [periodStats],
+  );
+
+  /** Day-by-day takings across the period, newest first. */
+  const periodDayRows = useMemo(() => {
+    const byDate = new Map<string, { date: string; total: number; bills: number }>();
+    periodStats.list.forEach((b) => {
+      const row = byDate.get(b.date) ?? { date: b.date, total: 0, bills: 0 };
+      row.total += b.amount;
+      row.bills += 1;
+      byDate.set(b.date, row);
+    });
+    return [...byDate.values()]
+      .sort((a, b) => (a.date < b.date ? 1 : -1))
+      .map((r) => {
+        const day = DAY_OPTIONS.find((d) => d.key === r.date);
+        return {
+          ...r,
+          totalLabel: formatINR(r.total),
+          dayLabel: day ? `${day.short}, ${day.sub}` : formatDateKey(r.date),
+        };
+      });
+  }, [periodStats]);
+
+  /** The period's best and worst selling day, for the report's highlights. */
+  const periodExtremes = useMemo(() => {
+    if (periodDayRows.length === 0) return null;
+    const sorted = [...periodDayRows].sort((a, b) => b.total - a.total);
+    return { best: sorted[0], worst: sorted[sorted.length - 1] };
+  }, [periodDayRows]);
 
   const chartBars = useMemo(() => {
     const max = Math.max(...periodStats.trend, 1);
@@ -279,6 +332,142 @@ export function useShop() {
       .filter((p) => ledgerWindow.to === "" || p.date <= ledgerWindow.to);
   }, [allRows, ledgerSearch, ledgerDueOnly, ledgerWindow]);
 
+  const creditWindow = useMemo(() => {
+    if (creditRange === "custom") {
+      return { from: creditFromDate, to: creditToDate || creditFromDate };
+    }
+    if (creditRange === "today") return { from: TODAY_KEY, to: "" };
+    if (creditRange === "week") return { from: dateKeyOf(dayBack(6)), to: "" };
+    if (creditRange === "month") return { from: dateKeyOf(dayBack(27)), to: "" };
+    return { from: "", to: "" };
+  }, [creditRange, creditFromDate, creditToDate]);
+
+  /** Every bill taken on credit, newest first, with what is left to collect. */
+  const creditBills = useMemo(
+    () =>
+      bills
+        .filter((b) => b.mode === "credit")
+        .map((b) => {
+          const repaid = (b.creditPayments ?? []).reduce((sum, p) => sum + p.amount, 0);
+          const balance = Math.max(0, b.amount - repaid);
+          return { ...b, repaid, balance, settled: balance === 0 };
+        })
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    [bills],
+  );
+
+  const creditDates = useMemo(() => new Set(creditBills.map((b) => b.date)), [creditBills]);
+
+  /** One group per person who owes the shop, largest debt first. */
+  const creditorGroups = useMemo(() => {
+    const q = creditSearch.trim().toLowerCase();
+    const inWindow = creditBills
+      .filter((b) => creditWindow.from === "" || b.date >= creditWindow.from)
+      .filter((b) => creditWindow.to === "" || b.date <= creditWindow.to);
+
+    const byName = new Map<
+      string,
+      {
+        customer: string;
+        rows: typeof inWindow;
+        owed: number;
+        taken: number;
+        lastDate: string;
+      }
+    >();
+    inWindow.forEach((b) => {
+      const name = b.customer || "Unnamed";
+      const g =
+        byName.get(name) ?? { customer: name, rows: [], owed: 0, taken: 0, lastDate: "" };
+      g.rows.push(b);
+      g.owed += b.balance;
+      g.taken += b.amount;
+      if (b.date > g.lastDate) g.lastDate = b.date;
+      byName.set(name, g);
+    });
+
+    return [...byName.values()]
+      .filter((g) => !creditOwingOnly || g.owed > 0)
+      .filter(
+        (g) =>
+          q === "" ||
+          g.customer.toLowerCase().includes(q) ||
+          g.rows.some((b) => b.desc.toLowerCase().includes(q)),
+      )
+      .sort((a, b) => (b.owed !== a.owed ? b.owed - a.owed : b.lastDate < a.lastDate ? -1 : 1))
+      .map((g) => {
+        const lastDay = DAY_OPTIONS.find((d) => d.key === g.lastDate);
+        return {
+          ...g,
+          settled: g.owed === 0,
+          owedLabel: formatINR(g.owed),
+          takenLabel: formatINR(g.taken),
+          lastLabel: lastDay ? `${lastDay.short}, ${lastDay.sub}` : formatDateKey(g.lastDate),
+          rows: g.rows.map((b) => {
+            const day = DAY_OPTIONS.find((d) => d.key === b.date);
+            const cat = categoryMeta(b.category);
+            return {
+              ...b,
+              amountLabel: formatINR(b.amount),
+              repaidLabel: formatINR(b.repaid),
+              balanceLabel: formatINR(b.balance),
+              catLabel: cat.label,
+              catColor: cat.color,
+              dayLabel: day ? `${day.short}, ${day.sub}` : formatDateKey(b.date),
+              payLog: (b.creditPayments ?? []).map((p) => {
+                const payDay = DAY_OPTIONS.find((d) => d.key === p.date);
+                return {
+                  ...p,
+                  amountLabel: formatINR(p.amount),
+                  dayLabel: payDay ? payDay.sub : formatDateKey(p.date),
+                };
+              }),
+            };
+          }),
+        };
+      });
+  }, [creditBills, creditSearch, creditWindow, creditOwingOnly]);
+
+  /** Everyone who has ever taken credit, for the bill form's name lookup. */
+  const customerStats = useMemo(() => {
+    const byName = new Map<string, { customer: string; bills: number; owed: number; lastDate: string }>();
+    creditBills.forEach((b) => {
+      const name = b.customer || "Unnamed";
+      const r = byName.get(name) ?? { customer: name, bills: 0, owed: 0, lastDate: "" };
+      r.bills += 1;
+      r.owed += b.balance;
+      if (b.date > r.lastDate) r.lastDate = b.date;
+      byName.set(name, r);
+    });
+    return [...byName.values()]
+      .sort((a, b) => (b.lastDate < a.lastDate ? -1 : 1))
+      .map((r) => ({ ...r, owedLabel: formatINR(r.owed) }));
+  }, [creditBills]);
+
+  /** Known customers matching what has been typed. Empty query lists all. */
+  const customerMatches = useMemo(() => {
+    const q = formCustomer.trim().toLowerCase();
+    if (q === "") return customerStats;
+    return customerStats.filter((r) => r.customer.toLowerCase().includes(q));
+  }, [customerStats, formCustomer]);
+
+  /** The person this credit bill would be filed under, if the name exists. */
+  const customerExact = useMemo(() => {
+    const q = formCustomer.trim().toLowerCase();
+    if (q === "") return null;
+    return customerStats.find((r) => r.customer.toLowerCase() === q) ?? null;
+  }, [customerStats, formCustomer]);
+
+  const creditorsOwed = useMemo(
+    () => creditorGroups.reduce((sum, g) => sum + g.owed, 0),
+    [creditorGroups],
+  );
+
+  const creditorsBillCount = useMemo(
+    () => creditorGroups.reduce((sum, g) => sum + g.rows.length, 0),
+    [creditorGroups],
+  );
+
   /** Purchases folded into one group per shop, for the collapsed history. */
   const supplierGroups = useMemo(() => {
     const byName = new Map<
@@ -427,6 +616,16 @@ export function useShop() {
   const addBill = useCallback(() => {
     const amt = parseFloat(formAmount);
     if (!amt || amt <= 0) return;
+    /* Reuse a known customer's own spelling, so "ravi" joins "Ravi" rather
+       than opening a second tab under the same person. */
+    const creditCustomerName = () => {
+      const typed = formCustomer.trim();
+      if (!typed) return "Unnamed";
+      const known = customerStats.find(
+        (r) => r.customer.toLowerCase() === typed.toLowerCase(),
+      );
+      return known ? known.customer : typed;
+    };
     const bill: Bill = {
       id: `b${Date.now()}`,
       date: TODAY_KEY,
@@ -435,15 +634,13 @@ export function useShop() {
       amount: amt,
       time: formatTime(new Date()),
       mode: formMode,
-      ...(formMode === "credit"
-        ? { customer: formCustomer.trim() || "Unnamed" }
-        : {}),
+      ...(formMode === "credit" ? { customer: creditCustomerName() } : {}),
     };
     setBills((prev) => [bill, ...prev]);
     setFormAmount("");
     setFormDesc("");
     setFormCustomer("");
-  }, [formAmount, formDesc, formCategory, formMode, formCustomer]);
+  }, [formAmount, formDesc, formCategory, formMode, formCustomer, customerStats]);
 
   const deleteBill = useCallback((id: string) => {
     setBills((prev) => prev.filter((b) => b.id !== id));
@@ -630,6 +827,78 @@ export function useShop() {
     [ledgerFromDate, ledgerToDate],
   );
 
+  /** Open, close, or move the settle field on a credit bill. */
+  const startSettling = useCallback((id: string | null) => {
+    setSettlingId(id);
+    setSettleAmount("");
+  }, []);
+
+  /** Records money a customer paid back. Never collects more than is owed. */
+  const settleCredit = useCallback((id: string, amount: number) => {
+    if (!amount || amount <= 0) return;
+    setBills((prev) =>
+      prev.map((b) => {
+        if (b.id !== id) return b;
+        const log = b.creditPayments ?? [];
+        const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
+        const take = Math.min(amount, owed);
+        if (take <= 0) return b;
+        return {
+          ...b,
+          creditPayments: [...log, { id: `cp${Date.now()}`, date: TODAY_KEY, amount: take }],
+        };
+      }),
+    );
+    setSettlingId(null);
+    setSettleAmount("");
+  }, []);
+
+  /** Clears everything one person owes, across all their credit bills. */
+  const settleAllFor = useCallback((customer: string) => {
+    setBills((prev) =>
+      prev.map((b) => {
+        if (b.mode !== "credit" || (b.customer || "Unnamed") !== customer) return b;
+        const log = b.creditPayments ?? [];
+        const owed = Math.max(0, b.amount - log.reduce((sum, p) => sum + p.amount, 0));
+        if (owed <= 0) return b;
+        return {
+          ...b,
+          creditPayments: [...log, { id: `cp${Date.now()}_${b.id}`, date: TODAY_KEY, amount: owed }],
+        };
+      }),
+    );
+    setSettlingId(null);
+    setSettleAmount("");
+  }, []);
+
+  const pickCreditDate = useCallback(
+    (key: string) => {
+      setCreditRange("custom");
+      if (creditFromDate === "" || creditToDate !== "") {
+        setCreditFromDate(key);
+        setCreditToDate("");
+      } else if (key < creditFromDate) {
+        setCreditToDate(creditFromDate);
+        setCreditFromDate(key);
+      } else {
+        setCreditToDate(key);
+      }
+    },
+    [creditFromDate, creditToDate],
+  );
+
+  const clearCreditDates = useCallback(() => {
+    setCreditRange("all");
+    setCreditFromDate("");
+    setCreditToDate("");
+  }, []);
+
+  const chooseCreditRange = useCallback((id: PurchaseRangeId) => {
+    setCreditRange(id);
+    setCreditFromDate("");
+    setCreditToDate("");
+  }, []);
+
   const clearLedgerDates = useCallback(() => {
     setLedgerRange("all");
     setLedgerFromDate("");
@@ -691,6 +960,9 @@ export function useShop() {
     periodStats,
     periodAvgPerDay,
     periodBest,
+    periodPaymentSplit,
+    periodDayRows,
+    periodExtremes,
     chartBars,
     categoryBreakdown,
     donutGradient,
@@ -725,6 +997,9 @@ export function useShop() {
     setFormMode,
     formCustomer,
     setFormCustomer,
+    customerStats,
+    customerMatches,
+    customerExact,
     creditTotal,
     pressPad,
     addBill,
@@ -768,6 +1043,27 @@ export function useShop() {
     pickLedgerDate,
     clearLedgerDates,
     purchaseDates,
+
+    // credit customers
+    creditorGroups,
+    creditorsOwed,
+    creditorsBillCount,
+    creditSearch,
+    setCreditSearch,
+    creditRange,
+    chooseCreditRange,
+    creditWindow,
+    creditDates,
+    pickCreditDate,
+    clearCreditDates,
+    creditOwingOnly,
+    setCreditOwingOnly,
+    settlingId,
+    startSettling,
+    settleAmount,
+    setSettleAmount,
+    settleCredit,
+    settleAllFor,
     purchaseSupplier,
     setPurchaseSupplier,
     purchaseItem,

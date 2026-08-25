@@ -1,0 +1,353 @@
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: var(--surface);
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+/* Wraps rather than scrolls: an overflow container would clip the calendar. */
+.rangeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rangeChip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 15px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.rangeChipActive {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.calWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.personCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.personHead {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  text-align: left;
+}
+
+.avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.personText {
+  display: block;
+  min-width: 0;
+  flex: 1;
+}
+
+.personName {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.personMeta {
+  display: block;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.personRight {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owed {
+  font-size: 16px;
+  color: var(--accent-gold);
+}
+
+.chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  transition: transform 0.18s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.bills {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 14px 12px;
+}
+
+.billRow {
+  padding: 10px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.billTop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.billFigures {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.billBalance {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--warning);
+  margin-top: 2px;
+}
+
+.payLog {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 8px;
+  padding-left: 9px;
+  border-left: 2px solid var(--border);
+}
+
+.payLogRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* Settle in full is the common case, so it takes the width; Part opens a field. */
+.settleRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.settleFull {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settlePart {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.settleInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.settleConfirm {
+  flex-shrink: 0;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--success);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.settleCancel {
+  flex-shrink: 0;
+  padding: 9px 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.settledTag {
+  margin-top: 9px;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.settleAll {
+  width: 100%;
+  margin-top: 9px;
+  padding: 11px;
+  border-radius: var(--radius-sm);
+  background: var(--success);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.owedClear {
+  font-size: 13px;
+  color: var(--success);
+}
+
+.owingActive {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.billDesc {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.billMeta {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.billAmount {
+  flex-shrink: 0;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+@media (min-width: 768px) {
+  .filters {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .searchRow {
+    flex: 1;
+    padding: 13px 16px;
+  }
+
+  .searchInput {
+    font-size: 15px;
+  }
+
+  .personHead {
+    padding: 16px 18px;
+  }
+
+  .bills {
+    padding: 0 18px 16px;
+  }
+
+  .owed {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+}

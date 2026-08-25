@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import type { Shop } from "@/lib/useShop";
 import { MONTHS_SHORT, formatDateKey } from "@/lib/format";
 import { dateKeyOf, TODAY_KEY } from "@/lib/seed";
 import k from "./CalendarFilter.module.css";
@@ -18,13 +17,29 @@ function monthCells(year: number, month: number): (string | null)[] {
   return cells;
 }
 
-export default function CalendarFilter({ shop, onDone }: { shop: Shop; onDone: () => void }) {
+export default function CalendarFilter({
+  window,
+  custom,
+  marked,
+  onPick,
+  onClear,
+  onDone,
+}: {
+  /** The selected window, as YYYY-MM-DD keys. */
+  window: { from: string; to: string };
+  /** Whether that window came from this calendar rather than a preset. */
+  custom: boolean;
+  /** Days carrying at least one entry, shown with a dot. */
+  marked: Set<string>;
+  onPick: (key: string) => void;
+  onClear: () => void;
+  onDone: () => void;
+}) {
   const today = new Date();
   const [cursor, setCursor] = useState({ y: today.getFullYear(), m: today.getMonth() });
 
   const cells = monthCells(cursor.y, cursor.m);
-  const { from, to } = shop.ledgerWindow;
-  const custom = shop.ledgerRange === "custom";
+  const { from, to } = window;
 
   function step(by: number) {
     const d = new Date(cursor.y, cursor.m + by, 1);
@@ -87,11 +102,11 @@ export default function CalendarFilter({ shop, onDone }: { shop: Shop; onDone: (
                 ]
                   .filter(Boolean)
                   .join(" ")}
-                onClick={() => shop.pickLedgerDate(key)}
+                onClick={() => onPick(key)}
               >
                 {Number(key.slice(8))}
                 {/* A dot marks a day that actually carries a bill. */}
-                {shop.purchaseDates.has(key) && <span className={k.dot} />}
+                {marked.has(key) && <span className={k.dot} />}
               </button>
             );
           })}
@@ -106,7 +121,7 @@ export default function CalendarFilter({ shop, onDone }: { shop: Shop; onDone: (
               : "Tap a day, then another for a range"}
           </div>
           <div className={k.footActions}>
-            <button type="button" className={k.clearButton} onClick={shop.clearLedgerDates}>
+            <button type="button" className={k.clearButton} onClick={onClear}>
               Clear
             </button>
             <button type="button" className={k.doneButton} onClick={onDone}>

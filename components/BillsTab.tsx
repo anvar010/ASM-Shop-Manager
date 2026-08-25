@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatINR, groupIN } from "@/lib/format";
@@ -8,6 +9,7 @@ import c from "./BillsTab.module.css";
 import { IconBackspace, IconBill, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function BillsTab({ shop }: { shop: Shop }) {
+  const [customerOpen, setCustomerOpen] = useState(false);
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
 
@@ -110,17 +112,68 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             })}
           </div>
 
+          {/* Typing looks up people who already have a tab, so a repeat credit
+              sale joins their existing one instead of starting a second. */}
           {shop.formMode === "credit" && (
-            <input
-              className={s.input}
-              type="text"
-              placeholder="Who is taking it on credit?"
-              value={shop.formCustomer}
-              onChange={(e) => shop.setFormCustomer(e.target.value)}
-              style={{ marginBottom: 14 }}
-              aria-label="Customer name"
-              autoComplete="off"
-            />
+            <div style={{ marginBottom: 14 }}>
+              <div className={c.lookup}>
+                <input
+                  className={s.input}
+                  type="text"
+                  placeholder="Who is taking it on credit?"
+                  value={shop.formCustomer}
+                  onChange={(e) => {
+                    shop.setFormCustomer(e.target.value);
+                    setCustomerOpen(true);
+                  }}
+                  onFocus={() => setCustomerOpen(true)}
+                  onBlur={() => setCustomerOpen(false)}
+                  onKeyDown={(e) => e.key === "Escape" && setCustomerOpen(false)}
+                  aria-label="Customer name"
+                  autoComplete="off"
+                />
+
+                {customerOpen && shop.customerMatches.length > 0 && (
+                  <div className={c.lookupList} role="listbox">
+                    {shop.customerMatches.map((m) => (
+                      <button
+                        key={m.customer}
+                        type="button"
+                        className={c.lookupItem}
+                        // mousedown fires before the input's blur closes the list
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          shop.setFormCustomer(m.customer);
+                          setCustomerOpen(false);
+                        }}
+                      >
+                        <span className={`${s.truncate} ${c.lookupName}`}>{m.customer}</span>
+                        <span className={c.lookupMeta}>
+                          {m.bills} {m.bills === 1 ? "bill" : "bills"} ·{" "}
+                          {m.owed > 0 ? `${m.owedLabel} owing` : "all settled"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {shop.customerExact ? (
+                <div className={c.matchNote}>
+                  Adding to <strong>{shop.customerExact.customer}</strong>&apos;s tab —{" "}
+                  {shop.customerExact.bills} earlier{" "}
+                  {shop.customerExact.bills === 1 ? "bill" : "bills"}
+                  {shop.customerExact.owed > 0
+                    ? `, ${shop.customerExact.owedLabel} still owing`
+                    : ", all settled"}
+                  .
+                </div>
+              ) : shop.formCustomer.trim() !== "" ? (
+                <div className={c.newNote}>
+                  New customer — <strong>{shop.formCustomer.trim()}</strong> will get their own tab.
+                </div>
+              ) : null}
+            </div>
           )}
 
           <button type="button" className={s.primaryButton} onClick={shop.addBill}>

@@ -126,6 +126,16 @@ export function IconTrash({ size = 13, color = "currentColor", style }: IconProp
   );
 }
 
+export function IconUsers({ size = 20, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <circle cx="9" cy="8" r="3.4" />
+      <path d="M3.5 20a5.5 5.5 0 0 1 11 0" />
+      <path d="M16 5.5a3.4 3.4 0 0 1 0 6.6M17.5 20a5.6 5.6 0 0 0-2-4.3" />
+    </svg>
+  );
+}
+
 export function IconCalendar({ size = 16, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">

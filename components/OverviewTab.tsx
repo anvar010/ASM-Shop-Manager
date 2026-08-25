@@ -5,7 +5,8 @@ import type { PeriodId } from "@/lib/types";
 import { formatINR, formatShortDate } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./OverviewTab.module.css";
-import { IconBill, IconBox, IconNote, IconTrend } from "./Icons";
+import Link from "next/link";
+import { IconBill, IconBox, IconNote, IconTrend, IconUsers } from "./Icons";
 
 const PERIODS: { id: PeriodId; label: string }[] = [
   { id: "today", label: "Today" },
@@ -28,7 +29,7 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
         <div className={s.muted}>{formatShortDate(new Date())}</div>
       </div>
 
-      {/* Quick actions — Overview doubles as a launcher for the three entry flows. */}
+      {/* Quick actions — Overview doubles as a launcher for the entry flows. */}
       <div className={c.quickRow}>
         <button type="button" className={`${c.quickButton} ${c.quickPrimary}`} onClick={shop.goAddBill}>
           <IconBill size={20} color="#fff" />
@@ -42,6 +43,13 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
           <IconBox size={20} color="var(--text-muted)" />
           <span>Add Purchase</span>
         </button>
+        <Link href="/credits" className={`${c.quickButton} ${c.quickCredit}`}>
+          <IconUsers size={20} color="var(--accent-gold)" />
+          <span>Credits</span>
+          {shop.creditorsOwed > 0 && (
+            <span className={`num ${c.quickBadge}`}>{formatINR(shop.creditorsOwed)}</span>
+          )}
+        </Link>
       </div>
 
       <div className={c.topGrid}>
@@ -49,8 +57,11 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
         <section className={s.card}>
           <div className={c.heroHead}>
             <div>
-              <div className={s.muted} style={{ marginBottom: 4 }}>
-                {periodStats.label} earnings
+              <div className={s.rowBetween} style={{ gap: 12, marginBottom: 4 }}>
+                <div className={s.muted}>{periodStats.label} earnings</div>
+                <Link href="/overview-report" className={s.linkButton}>
+                  View all
+                </Link>
               </div>
               <div className={`num ${c.heroValue}`}>{formatINR(periodStats.total)}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 8 }}>

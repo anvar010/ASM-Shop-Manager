@@ -180,8 +180,28 @@ function buildHistory(): Bill[] {
   return out;
 }
 
+/* A handful of credit sales spread over the week, so the credit-customers
+   page opens with several people to chase rather than one. */
+const CREDIT_BILLS: [string, CategoryId, number, string, string, number][] = [
+  ["Milk + bread daily", "groceries", 260, "8:40 AM", "Ravi", 1],
+  ["Vegetables weekly", "produce", 540, "6:15 PM", "Suresh", 1],
+  ["Rice 10kg + oil", "groceries", 1150, "11:20 AM", "Suresh", 3],
+  ["Snacks for shop party", "other", 380, "5:05 PM", "Lakshmi", 4],
+  ["Monthly grocery basket", "groceries", 1680, "10:30 AM", "Lakshmi", 6],
+];
+
 export const SEED_BILLS: Bill[] = [
   ...TODAY_BILLS.map((b) => ({ ...b, date: TODAY_KEY })),
+  ...CREDIT_BILLS.map((cb, i) => ({
+    id: `c${i}`,
+    date: dateKeyOf(dayBack(cb[5])),
+    desc: cb[0],
+    category: cb[1],
+    amount: cb[2],
+    time: cb[3],
+    mode: "credit" as PaymentModeId,
+    customer: cb[4],
+  })),
   ...buildHistory(),
 ];
 

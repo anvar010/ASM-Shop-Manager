@@ -43,6 +43,8 @@ export interface Bill {
   mode: PaymentModeId;
   /** Who owes the money. Only set when mode is "credit". */
   customer?: string;
+  /** Repayments against a credit sale, oldest first. */
+  creditPayments?: PurchasePayment[];
 }
 
 export interface Expense {

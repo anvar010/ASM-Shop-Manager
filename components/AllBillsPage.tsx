@@ -105,7 +105,16 @@ export default function AllBillsPage() {
               <IconCalendar size={13} color={custom ? "#fff" : "var(--text-muted)"} />
               {calLabel}
             </button>
-            {calOpen && <CalendarFilter shop={shop} onDone={() => setCalOpen(false)} />}
+            {calOpen && (
+              <CalendarFilter
+                window={shop.ledgerWindow}
+                custom={custom}
+                marked={shop.purchaseDates}
+                onPick={shop.pickLedgerDate}
+                onClear={shop.clearLedgerDates}
+                onDone={() => setCalOpen(false)}
+              />
+            )}
           </div>
 
           <button
