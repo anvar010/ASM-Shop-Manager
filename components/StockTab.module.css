@@ -1,8 +1,32 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leftCol,
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dueName {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ---------------- Controls ---------------- */
+
 .controls {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 14px;
+}
+
+.fieldGap {
+  margin-bottom: 12px;
 }
 
 .searchRow {
@@ -58,69 +82,188 @@
   color: #fff;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+/* ---------------- Supplier lookup ---------------- */
+
+.lookup {
+  position: relative;
 }
 
-.productCard {
-  padding: 11px 11px 9px;
+.lookupList {
+  position: absolute;
+  z-index: 15;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 208px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
-/* On mobile the card is half-width, so name and stepper stack. */
-.productTop {
+.lookupItem {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: space-between;
-  gap: 9px;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
 }
 
-.stepper {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
+.lookupItem:hover {
+  background: var(--surface-alt);
 }
 
-.qty {
-  min-width: 36px;
-  text-align: center;
-}
-
-.qtyValue {
-  font-size: 15px;
+.lookupName {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
 }
 
-.qtyUnit {
-  font-size: 9px;
-  color: var(--text-faint);
+.lookupMeta {
+  font-size: 11px;
   font-weight: 600;
+  color: var(--text-faint);
 }
 
-.formGrid {
+.matchNote,
+.newNote {
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.matchNote {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.newNote {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.amountGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* ---------------- History ---------------- */
+
+.shopList {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.numRow {
-  display: flex;
-  gap: 10px;
+.shopCard {
+  padding: 0;
+  overflow: hidden;
 }
 
+/* The whole summary is the expand target, so it is a button, not a div. */
+.shopHead {
+  width: 100%;
+  display: block;
+  padding: 13px 14px;
+  text-align: left;
+}
+
+.shopHeadTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.shopName {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.shopMeta {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.shopChevron {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  transition: transform 0.18s ease;
+}
+
+.shopChevronOpen {
+  transform: rotate(180deg);
+}
+
+.shopLoads {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+/* Total / Paid / Balance on a shop's summary, aligned down the column. */
+.moneyRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.moneyValue {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.moneyLabel {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ---------------- Tablet ---------------- */
+
 @media (min-width: 768px) {
+  .layout {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .leftCol,
+  .rightCol {
+    gap: 16px;
+  }
+
   .controls {
-    flex-direction: row;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 20px;
+    gap: 12px;
   }
 
   .searchRow {
-    flex: 1;
     padding: 13px 16px;
   }
 
@@ -130,48 +273,42 @@
 
   .filterChip,
   .addButton {
+    align-self: stretch;
+    justify-content: center;
     padding: 13px 20px;
     border-radius: var(--radius-md);
     font-size: 13px;
   }
 
-  .grid {
-    gap: 12px;
-  }
-
-  .productCard {
+  .shopHead {
     padding: 16px 18px;
   }
 
-  .productTop {
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
+  .shopLoads {
+    padding: 0 18px 18px;
   }
 
-  .qtyValue {
-    font-size: 18px;
+  .moneyValue {
+    font-size: 16px;
   }
 
-  .qty {
-    min-width: 42px;
-  }
-
-  .stepper {
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  .formGrid {
-    display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px;
+  .moneyLabel {
+    font-size: 10.5px;
   }
 }
 
+/* ---------------- Desktop ---------------- */
+
 @media (min-width: 1280px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 14px;
+  .layout {
+    grid-template-columns: 380px minmax(0, 1fr);
+  }
+
+  /* Loads inside an opened shop sit two abreast once there is room. */
+  .shopLoads {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
   }
 }

@@ -2,16 +2,25 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
-import { formatINR, formatTime } from "./format";
+import { formatDateKey, formatINR, formatTime } from "./format";
 import { buildPeriod, PERIOD_META } from "./periods";
-import { DAY_OPTIONS, SEED_BILLS, SEED_EXPENSES, SEED_PRODUCTS, TODAY_KEY } from "./seed";
+import {
+  DAY_OPTIONS,
+  dateKeyOf,
+  dayBack,
+  SEED_BILLS,
+  SEED_EXPENSES,
+  SEED_PURCHASES,
+  TODAY_KEY,
+} from "./seed";
 import type {
   Bill,
   CategoryId,
   ExpenseCategoryId,
   PaymentModeId,
   PeriodId,
-  Product,
+  Purchase,
+  PurchaseRangeId,
   TabId,
 } from "./types";
 
@@ -32,15 +41,33 @@ export function useShop() {
   const [expDesc, setExpDesc] = useState("");
   const [expCategory, setExpCategory] = useState<ExpenseCategoryId>("supplier");
 
-  const [products, setProducts] = useState<Product[]>(SEED_PRODUCTS);
-  const [stockSearch, setStockSearch] = useState("");
-  const [stockLowOnly, setStockLowOnly] = useState(false);
-  const [showStockForm, setShowStockForm] = useState(false);
-  const [stockName, setStockName] = useState("");
-  const [stockCategory, setStockCategory] = useState<CategoryId>("groceries");
-  const [stockQty, setStockQty] = useState("");
-  const [stockThreshold, setStockThreshold] = useState("");
-  const [stockUnit, setStockUnit] = useState("pkts");
+  const [purchases, setPurchases] = useState<Purchase[]>(SEED_PURCHASES);
+  const [purchaseSearch, setPurchaseSearch] = useState("");
+  const [purchaseDueOnly, setPurchaseDueOnly] = useState(false);
+  /* The all-bills page filters independently of the Stock tab, so switching
+     between them never leaves one quietly narrowed by the other. */
+  const [ledgerSearch, setLedgerSearch] = useState("");
+  const [ledgerDueOnly, setLedgerDueOnly] = useState(false);
+  const [ledgerRange, setLedgerRange] = useState<PurchaseRangeId>("all");
+  /** Custom window picked on the calendar, as YYYY-MM-DD keys. */
+  const [ledgerFromDate, setLedgerFromDate] = useState("");
+  const [ledgerToDate, setLedgerToDate] = useState("");
+  const [purchaseSupplier, setPurchaseSupplier] = useState("");
+  const [purchaseItem, setPurchaseItem] = useState("");
+  const [purchaseAmount, setPurchaseAmount] = useState("");
+  const [purchasePaid, setPurchasePaid] = useState("");
+  /* Editing happens on the purchase's own card and keeps its own fields, so
+     it never disturbs a half-typed new purchase in the form above. */
+  const [editingPurchaseId, setEditingPurchaseId] = useState<string | null>(null);
+  const [editSupplier, setEditSupplier] = useState("");
+  const [editItem, setEditItem] = useState("");
+  const [editAmount, setEditAmount] = useState("");
+  const [editPaid, setEditPaid] = useState("");
+  /** Bumped whenever a row sends details to the form, so the view can scroll to it. */
+  const [purchaseFormNonce, setPurchaseFormNonce] = useState(0);
+  /** Which purchase row has its pay-off field open, and what is typed in it. */
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState("");
 
   /* ---------------------------------------------------------------- *
    * Derived
@@ -180,46 +207,196 @@ export function useShop() {
     [expenses],
   );
 
-  const stockRows = useMemo(
+  /* A purchase is settled once the upfront payment plus every later
+     part-payment covers the value of the goods. Decorated once here, then
+     filtered separately by the Stock tab and the all-bills page. */
+  const allRows = useMemo(
     () =>
-      products
-        .filter((p) => p.name.toLowerCase().includes(stockSearch.toLowerCase()))
-        .filter((p) => !stockLowOnly || p.qty <= p.threshold)
+      purchases
         .map((p) => {
-          const cat = categoryMeta(p.category);
-          const isOut = p.qty === 0;
-          const isLow = !isOut && p.qty <= p.threshold;
+          const paidLater = p.payments.reduce((sum, pay) => sum + pay.amount, 0);
+          const paid = p.paidUpfront + paidLater;
+          const balance = Math.max(0, p.amount - paid);
+          const day = DAY_OPTIONS.find((d) => d.key === p.date);
           return {
             ...p,
-            catLabel: cat.label,
-            catColor: cat.color,
-            showBadge: isOut || isLow,
-            badgeLabel: isOut ? "Out of stock" : "Low stock",
-            badgeShort: isOut ? "Out" : "Low",
-            badgeBg: isOut ? "var(--danger-bg)" : "var(--warning-bg)",
-            badgeFg: isOut ? "var(--danger)" : "var(--warning)",
+            paid,
+            paidLater,
+            balance,
+            settled: balance === 0,
+            dayLabel: day ? `${day.short}, ${day.sub}` : formatDateKey(p.date),
+            amountLabel: formatINR(p.amount),
+            paidLabel: formatINR(paid),
+            balanceLabel: formatINR(balance),
+            payLog: p.payments.map((pay) => {
+              const payDay = DAY_OPTIONS.find((d) => d.key === pay.date);
+              return {
+                ...pay,
+                amountLabel: formatINR(pay.amount),
+                dayLabel: payDay ? payDay.sub : formatDateKey(pay.date),
+              };
+            }),
           };
-        }),
-    [products, stockSearch, stockLowOnly],
+        })
+        .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
+    [purchases],
   );
 
-  const lowStockItems = useMemo(
-    () => products.filter((p) => p.qty <= p.threshold).sort((a, b) => a.qty - b.qty),
-    [products],
-  );
+  const purchaseRows = useMemo(() => {
+    const q = purchaseSearch.trim().toLowerCase();
+    return allRows
+      .filter(
+        (p) =>
+          q === "" || p.supplier.toLowerCase().includes(q) || p.item.toLowerCase().includes(q),
+      )
+      .filter((p) => !purchaseDueOnly || !p.settled);
+  }, [allRows, purchaseSearch, purchaseDueOnly]);
 
-  const lowStockList = useMemo(
-    () =>
-      lowStockItems.slice(0, 4).map((p) => {
-        const isOut = p.qty === 0;
-        return {
-          ...p,
-          badgeLabel: isOut ? "Out" : "Low",
-          badgeBg: isOut ? "var(--danger-bg)" : "var(--warning-bg)",
-          badgeFg: isOut ? "var(--danger)" : "var(--warning)",
+  /** The window the ledger admits. Empty strings mean "no bound". */
+  const ledgerWindow = useMemo(() => {
+    if (ledgerRange === "custom") {
+      return { from: ledgerFromDate, to: ledgerToDate || ledgerFromDate };
+    }
+    if (ledgerRange === "today") return { from: TODAY_KEY, to: "" };
+    if (ledgerRange === "week") return { from: dateKeyOf(dayBack(6)), to: "" };
+    if (ledgerRange === "month") return { from: dateKeyOf(dayBack(27)), to: "" };
+    return { from: "", to: "" };
+  }, [ledgerRange, ledgerFromDate, ledgerToDate]);
+
+  /** Days that carry at least one bill, for the calendar's markers. */
+  const purchaseDates = useMemo(() => new Set(purchases.map((p) => p.date)), [purchases]);
+
+  /** Every bill, flat and newest first, for the all-bills page. */
+  const ledgerRows = useMemo(() => {
+    const q = ledgerSearch.trim().toLowerCase();
+    return allRows
+      .filter(
+        (p) =>
+          q === "" || p.supplier.toLowerCase().includes(q) || p.item.toLowerCase().includes(q),
+      )
+      .filter((p) => !ledgerDueOnly || !p.settled)
+      .filter((p) => ledgerWindow.from === "" || p.date >= ledgerWindow.from)
+      .filter((p) => ledgerWindow.to === "" || p.date <= ledgerWindow.to);
+  }, [allRows, ledgerSearch, ledgerDueOnly, ledgerWindow]);
+
+  /** Purchases folded into one group per shop, for the collapsed history. */
+  const supplierGroups = useMemo(() => {
+    const byName = new Map<
+      string,
+      {
+        supplier: string;
+        rows: typeof purchaseRows;
+        total: number;
+        paid: number;
+        balance: number;
+        lastDate: string;
+        lastLabel: string;
+      }
+    >();
+    purchaseRows.forEach((r) => {
+      const g =
+        byName.get(r.supplier) ??
+        {
+          supplier: r.supplier,
+          rows: [] as typeof purchaseRows,
+          total: 0,
+          paid: 0,
+          balance: 0,
+          lastDate: "",
+          lastLabel: "",
         };
-      }),
-    [lowStockItems],
+      g.rows.push(r);
+      g.total += r.amount;
+      g.paid += r.paid;
+      g.balance += r.balance;
+      if (r.date > g.lastDate) {
+        g.lastDate = r.date;
+        g.lastLabel = r.dayLabel;
+      }
+      byName.set(r.supplier, g);
+    });
+    // Most recently bought from first; a bigger balance breaks a same-day tie.
+    return [...byName.values()]
+      .sort((a, b) =>
+        a.lastDate === b.lastDate ? b.balance - a.balance : a.lastDate < b.lastDate ? 1 : -1,
+      )
+      .map((g) => ({
+        ...g,
+        settled: g.balance === 0,
+        totalLabel: formatINR(g.total),
+        paidLabel: formatINR(g.paid),
+        balanceLabel: formatINR(g.balance),
+      }));
+  }, [purchaseRows]);
+
+  /** What is still owed, one row per supplier, largest first. */
+  const supplierDues = useMemo(() => {
+    const byName = new Map<string, { supplier: string; balance: number; loads: number }>();
+    purchases.forEach((p) => {
+      const paid = p.paidUpfront + p.payments.reduce((sum, pay) => sum + pay.amount, 0);
+      const balance = Math.max(0, p.amount - paid);
+      if (balance === 0) return;
+      const row = byName.get(p.supplier) ?? { supplier: p.supplier, balance: 0, loads: 0 };
+      row.balance += balance;
+      row.loads += 1;
+      byName.set(p.supplier, row);
+    });
+    return [...byName.values()]
+      .sort((a, b) => b.balance - a.balance)
+      .map((r) => ({ ...r, balanceLabel: formatINR(r.balance) }));
+  }, [purchases]);
+
+  /** Every shop bought from, with its load count and what is still owed. */
+  const supplierStats = useMemo(() => {
+    const byName = new Map<
+      string,
+      { supplier: string; loads: number; spent: number; balance: number; lastDate: string }
+    >();
+    purchases.forEach((p) => {
+      const paid = p.paidUpfront + p.payments.reduce((sum, pay) => sum + pay.amount, 0);
+      const row =
+        byName.get(p.supplier) ??
+        { supplier: p.supplier, loads: 0, spent: 0, balance: 0, lastDate: "" };
+      row.loads += 1;
+      row.spent += p.amount;
+      row.balance += Math.max(0, p.amount - paid);
+      if (p.date > row.lastDate) row.lastDate = p.date;
+      byName.set(p.supplier, row);
+    });
+    return [...byName.values()]
+      .sort((a, b) => (b.lastDate === a.lastDate ? b.loads - a.loads : b.lastDate < a.lastDate ? -1 : 1))
+      .map((r) => ({
+        ...r,
+        balanceLabel: formatINR(r.balance),
+        spentLabel: formatINR(r.spent),
+        lastLabel: formatDateKey(r.lastDate),
+      }));
+  }, [purchases]);
+
+  /** Known shops matching what has been typed so far. Empty query lists all. */
+  const supplierMatches = useMemo(() => {
+    const q = purchaseSupplier.trim().toLowerCase();
+    if (q === "") return supplierStats;
+    return supplierStats.filter((r) => r.supplier.toLowerCase().includes(q));
+  }, [supplierStats, purchaseSupplier]);
+
+  /** The shop this purchase would be filed under, if the name already exists. */
+  const supplierExact = useMemo(() => {
+    const q = purchaseSupplier.trim().toLowerCase();
+    if (q === "") return null;
+    return supplierStats.find((r) => r.supplier.toLowerCase() === q) ?? null;
+  }, [supplierStats, purchaseSupplier]);
+
+  /** Part-payments already logged against the row being edited, if any. */
+  const editingPaidLater = useMemo(() => {
+    if (!editingPurchaseId) return 0;
+    const p = purchases.find((x) => x.id === editingPurchaseId);
+    return p ? p.payments.reduce((sum, pay) => sum + pay.amount, 0) : 0;
+  }, [editingPurchaseId, purchases]);
+
+  const totalOwed = useMemo(
+    () => supplierDues.reduce((sum, r) => sum + r.balance, 0),
+    [supplierDues],
   );
 
   const selectedDay = DAY_OPTIONS.find((d) => d.key === selectedDate) ?? DAY_OPTIONS[0];
@@ -319,33 +496,180 @@ export function useShop() {
     [expenses],
   );
 
-  const stepStock = useCallback((id: string, delta: number) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, qty: Math.max(0, p.qty + delta) } : p)),
-    );
+  const resetPurchaseForm = useCallback(() => {
+    setEditingPurchaseId(null);
+    setPurchaseSupplier("");
+    setPurchaseItem("");
+    setPurchaseAmount("");
+    setPurchasePaid("");
   }, []);
 
-  const addProduct = useCallback(() => {
-    const name = stockName.trim();
-    if (!name) return;
-    const qty = parseInt(stockQty, 10);
-    const threshold = parseInt(stockThreshold, 10);
-    setProducts((prev) => [
+  const addPurchase = useCallback(() => {
+    const typed = purchaseSupplier.trim();
+    const amt = parseFloat(purchaseAmount);
+    if (!typed || !amt || amt <= 0) return;
+    // Reuse a known shop's own spelling, so "ramesh dairy" joins "Ramesh Dairy"
+    // instead of opening a second account under the same name.
+    const known = supplierStats.find((r) => r.supplier.toLowerCase() === typed.toLowerCase());
+    const typedPaid = parseFloat(purchasePaid);
+    const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
+    setPurchases((prev) => [
       {
-        id: `p${Date.now()}`,
-        name,
-        category: stockCategory,
-        unit: stockUnit,
-        qty: Number.isNaN(qty) ? 0 : Math.max(0, qty),
-        threshold: Number.isNaN(threshold) ? 5 : Math.max(0, threshold),
-        updated: "Just now",
+        id: `w${Date.now()}`,
+        date: TODAY_KEY,
+        supplier: known ? known.supplier : typed,
+        item: purchaseItem.trim() || "Stock",
+        amount: amt,
+        // Paying more than the goods are worth would read as a negative balance.
+        paidUpfront: Math.min(paid, amt),
+        payments: [],
       },
       ...prev,
     ]);
-    setStockName("");
-    setStockQty("");
-    setStockThreshold("");
-  }, [stockName, stockQty, stockThreshold, stockCategory, stockUnit]);
+    resetPurchaseForm();
+  }, [
+    supplierStats,
+    purchaseSupplier,
+    purchaseItem,
+    purchaseAmount,
+    purchasePaid,
+    resetPurchaseForm,
+  ]);
+
+  const editPurchase = useCallback(
+    (id: string) => {
+      const p = purchases.find((x) => x.id === id);
+      if (!p) return;
+      setEditingPurchaseId(id);
+      setEditSupplier(p.supplier);
+      setEditItem(p.item);
+      setEditAmount(String(p.amount));
+      setEditPaid(String(p.paidUpfront));
+      setPayingId(null);
+    },
+    [purchases],
+  );
+
+  const cancelEdit = useCallback(() => setEditingPurchaseId(null), []);
+
+  /** Saves the card currently open for editing. */
+  const saveEdit = useCallback(() => {
+    const typed = editSupplier.trim();
+    const amt = parseFloat(editAmount);
+    if (!editingPurchaseId || !typed || !amt || amt <= 0) return;
+    // A load cannot be worth less than the instalments already paid against it.
+    if (amt < editingPaidLater) return;
+    const known = supplierStats.find((r) => r.supplier.toLowerCase() === typed.toLowerCase());
+    const typedPaid = parseFloat(editPaid);
+    const paid = Number.isNaN(typedPaid) ? 0 : Math.max(0, typedPaid);
+    setPurchases((prev) =>
+      prev.map((p) =>
+        p.id === editingPurchaseId
+          ? {
+              ...p,
+              supplier: known ? known.supplier : typed,
+              item: editItem.trim() || "Stock",
+              amount: amt,
+              // Later part-payments stand; the upfront figure absorbs the rest.
+              paidUpfront: Math.max(0, Math.min(paid, amt - editingPaidLater)),
+            }
+          : p,
+      ),
+    );
+    setEditingPurchaseId(null);
+  }, [
+    editingPurchaseId,
+    editingPaidLater,
+    supplierStats,
+    editSupplier,
+    editItem,
+    editAmount,
+    editPaid,
+  ]);
+
+  /** Same shop, same goods, fresh load — carries the details, not the money. */
+  const repeatPurchase = useCallback(
+    (id: string) => {
+      const p = purchases.find((x) => x.id === id);
+      if (!p) return;
+      setEditingPurchaseId(null);
+      setPurchaseSupplier(p.supplier);
+      setPurchaseItem(p.item);
+      setPurchaseAmount(String(p.amount));
+      setPurchasePaid("");
+      setPayingId(null);
+      setPurchaseFormNonce((n) => n + 1);
+    },
+    [purchases],
+  );
+
+  const deletePurchase = useCallback(
+    (id: string) => {
+      setPurchases((prev) => prev.filter((p) => p.id !== id));
+      if (editingPurchaseId === id) setEditingPurchaseId(null);
+    },
+    [editingPurchaseId],
+  );
+
+  /** Open, close, or move the pay-off field on a purchase row. */
+  /* Tapping a day starts a window; tapping a second day closes it. A third
+     tap starts over, which is what "pick different dates" always means. */
+  const pickLedgerDate = useCallback(
+    (key: string) => {
+      setLedgerRange("custom");
+      if (ledgerFromDate === "" || ledgerToDate !== "") {
+        setLedgerFromDate(key);
+        setLedgerToDate("");
+      } else if (key < ledgerFromDate) {
+        setLedgerToDate(ledgerFromDate);
+        setLedgerFromDate(key);
+      } else {
+        setLedgerToDate(key);
+      }
+    },
+    [ledgerFromDate, ledgerToDate],
+  );
+
+  const clearLedgerDates = useCallback(() => {
+    setLedgerRange("all");
+    setLedgerFromDate("");
+    setLedgerToDate("");
+  }, []);
+
+  /** Choosing a preset drops whatever the calendar had selected. */
+  const chooseLedgerRange = useCallback((id: PurchaseRangeId) => {
+    setLedgerRange(id);
+    setLedgerFromDate("");
+    setLedgerToDate("");
+  }, []);
+
+  const startPaying = useCallback((id: string | null) => {
+    setPayingId(id);
+    setPayAmount("");
+  }, []);
+
+  /** Record money handed over against one purchase. Never overpays it. */
+  const payPurchase = useCallback(
+    (id: string, amount: number) => {
+      if (!amount || amount <= 0) return;
+      setPurchases((prev) =>
+        prev.map((p) => {
+          if (p.id !== id) return p;
+          const paid = p.paidUpfront + p.payments.reduce((s2, pay) => s2 + pay.amount, 0);
+          const owed = Math.max(0, p.amount - paid);
+          const pay = Math.min(amount, owed);
+          if (pay <= 0) return p;
+          return {
+            ...p,
+            payments: [...p.payments, { id: `wp${Date.now()}`, date: TODAY_KEY, amount: pay }],
+          };
+        }),
+      );
+      setPayingId(null);
+      setPayAmount("");
+    },
+    [],
+  );
 
   const goAddBill = useCallback(() => {
     setActiveTab("bills");
@@ -354,7 +678,7 @@ export function useShop() {
 
   const goAddExpense = useCallback(() => setActiveTab("expenses"), []);
 
-  const goCountStock = useCallback(() => setActiveTab("stock"), []);
+  const goAddPurchase = useCallback(() => setActiveTab("stock"), []);
 
   return {
     // navigation
@@ -376,11 +700,9 @@ export function useShop() {
     profit,
     todayCash,
     todayRows,
-    lowStockList,
-    lowStockMore: Math.max(0, lowStockItems.length - 4),
     goAddBill,
     goAddExpense,
-    goCountStock,
+    goAddPurchase,
 
     // bills
     dayChips,
@@ -421,27 +743,62 @@ export function useShop() {
     deleteExpense,
     editExpense,
 
-    // stock
-    stockRows,
-    stockSearch,
-    setStockSearch,
-    stockLowOnly,
-    setStockLowOnly,
-    showStockForm,
-    setShowStockForm,
-    stockName,
-    setStockName,
-    stockCategory,
-    setStockCategory,
-    stockQty,
-    setStockQty,
-    stockThreshold,
-    setStockThreshold,
-    stockUnit,
-    setStockUnit,
-    addProduct,
-    stepStock,
-
+    // stock purchases
+    purchaseRows,
+    supplierGroups,
+    supplierDues,
+    supplierStats,
+    supplierMatches,
+    supplierExact,
+    totalOwed,
+    purchaseSearch,
+    setPurchaseSearch,
+    purchaseDueOnly,
+    setPurchaseDueOnly,
+    ledgerRows,
+    ledgerSearch,
+    setLedgerSearch,
+    ledgerDueOnly,
+    setLedgerDueOnly,
+    ledgerRange,
+    chooseLedgerRange,
+    ledgerFromDate,
+    ledgerToDate,
+    ledgerWindow,
+    pickLedgerDate,
+    clearLedgerDates,
+    purchaseDates,
+    purchaseSupplier,
+    setPurchaseSupplier,
+    purchaseItem,
+    setPurchaseItem,
+    purchaseAmount,
+    setPurchaseAmount,
+    purchasePaid,
+    setPurchasePaid,
+    payingId,
+    startPaying,
+    payAmount,
+    setPayAmount,
+    editingPurchaseId,
+    editingPaidLater,
+    editSupplier,
+    setEditSupplier,
+    editItem,
+    setEditItem,
+    editAmount,
+    setEditAmount,
+    editPaid,
+    setEditPaid,
+    purchaseFormNonce,
+    addPurchase,
+    editPurchase,
+    saveEdit,
+    cancelEdit,
+    repeatPurchase,
+    resetPurchaseForm,
+    deletePurchase,
+    payPurchase,
   };
 }
 

@@ -126,6 +126,23 @@ export function IconTrash({ size = 13, color = "currentColor", style }: IconProp
   );
 }
 
+export function IconCalendar({ size = 16, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="2.5" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+    </svg>
+  );
+}
+
+export function IconChevron({ size = 16, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
 export function IconSearch({ size = 16, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">

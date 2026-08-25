@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { ShopProvider } from "@/lib/shopContext";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -32,7 +33,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
-      <body>{children}</body>
+      <body>
+        <ShopProvider>{children}</ShopProvider>
+      </body>
     </html>
   );
 }

@@ -38,9 +38,9 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
           <IconNote size={20} color="var(--text-muted)" />
           <span>Add Expense</span>
         </button>
-        <button type="button" className={c.quickButton} onClick={shop.goCountStock}>
+        <button type="button" className={c.quickButton} onClick={shop.goAddPurchase}>
           <IconBox size={20} color="var(--text-muted)" />
-          <span>Count Stock</span>
+          <span>Add Purchase</span>
         </button>
       </div>
 
@@ -218,42 +218,40 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
           </div>
         </section>
 
-        {/* Restocking */}
+        {/* Supplier dues */}
         <section className={s.card}>
           <div className={s.rowBetween} style={{ marginBottom: 14 }}>
-            <div className={s.cardTitle}>Needs restocking</div>
-            <button type="button" className={s.linkButton} onClick={shop.goCountStock}>
-              Open stock
+            <div className={s.cardTitle}>You owe suppliers</div>
+            <button type="button" className={s.linkButton} onClick={shop.goAddPurchase}>
+              Open ledger
             </button>
           </div>
-          {shop.lowStockList.length > 0 ? (
-            <div className={c.lowGrid} style={{ display: "grid", gap: 11 }}>
-              {shop.lowStockList.map((p) => (
-                <div key={p.id} className={c.lowRow}>
+          {shop.supplierDues.length > 0 ? (
+            <div className={s.stack}>
+              {shop.supplierDues.slice(0, 4).map((d) => (
+                <div key={d.supplier} className={s.rowBetween}>
                   <div style={{ minWidth: 0 }}>
                     <div className={s.truncate} style={{ fontSize: 13, fontWeight: 700 }}>
-                      {p.name}
+                      {d.supplier}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600 }}>
-                      {p.qty} {p.unit} left
+                      {d.loads} unpaid {d.loads === 1 ? "load" : "loads"}
                     </div>
                   </div>
-                  <span
-                    className={s.badge}
-                    style={{ background: p.badgeBg, color: p.badgeFg }}
-                  >
-                    {p.badgeLabel}
-                  </span>
+                  <div className="num" style={{ fontSize: 14, color: "var(--warning)" }}>
+                    {d.balanceLabel}
+                  </div>
                 </div>
               ))}
-              {shop.lowStockMore > 0 && (
-                <div style={{ fontSize: 11.5, color: "var(--text-faint)", fontWeight: 600 }}>
-                  +{shop.lowStockMore} more
+              <div className={s.rowBetween} style={{ marginTop: 4 }}>
+                <div className={s.muted}>Total outstanding</div>
+                <div className="num" style={{ fontSize: 15 }}>
+                  {formatINR(shop.totalOwed)}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
-            <div className={s.muted}>Everything is above its alert level.</div>
+            <div className={s.muted}>Every wholesale load is paid for.</div>
           )}
         </section>
       </div>

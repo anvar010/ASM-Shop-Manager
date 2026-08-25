@@ -1,5 +1,5 @@
 import { formatDayMonth, formatLongDate, WEEKDAYS_SHORT } from "./format";
-import type { Bill, CategoryId, DayOption, Expense, PaymentModeId, Product } from "./types";
+import type { Bill, CategoryId, DayOption, Expense, PaymentModeId, Purchase } from "./types";
 
 /* ------------------------------------------------------------------ *
  * Dates
@@ -186,7 +186,7 @@ export const SEED_BILLS: Bill[] = [
 ];
 
 /* ------------------------------------------------------------------ *
- * Expenses and stock
+ * Expenses
  * ------------------------------------------------------------------ */
 
 export const SEED_EXPENSES: Expense[] = [
@@ -195,19 +195,66 @@ export const SEED_EXPENSES: Expense[] = [
   { id: "e3", desc: "Helper daily wage", category: "wages", amount: 400, time: "1:15 PM" },
 ];
 
-export const SEED_PRODUCTS: Product[] = [
-  { id: "p1", name: "Basmati Rice 5kg", category: "groceries", unit: "bags", qty: 42, threshold: 10, updated: "Today, 8:30 AM" },
-  { id: "p2", name: "Sunflower Oil 1L", category: "groceries", unit: "btls", qty: 18, threshold: 8, updated: "Today, 8:30 AM" },
-  { id: "p3", name: "Toor Dal 1kg", category: "groceries", unit: "bags", qty: 6, threshold: 10, updated: "Yesterday, 6:10 PM" },
-  { id: "p4", name: "Mineral Water 1L", category: "other", unit: "btls", qty: 120, threshold: 30, updated: "Today, 8:30 AM" },
-  { id: "p5", name: "Cola 500ml", category: "other", unit: "btls", qty: 4, threshold: 15, updated: "Today, 11:00 AM" },
-  { id: "p6", name: "Tea Powder 250g", category: "other", unit: "pkts", qty: 22, threshold: 10, updated: "Yesterday, 6:10 PM" },
-  { id: "p7", name: "Detergent Powder 1kg", category: "other", unit: "pkts", qty: 0, threshold: 10, updated: "Today, 11:40 AM" },
-  { id: "p8", name: "Dish Soap 500ml", category: "other", unit: "btls", qty: 15, threshold: 8, updated: "Yesterday, 6:10 PM" },
-  { id: "p9", name: "Potato Chips", category: "other", unit: "pkts", qty: 9, threshold: 12, updated: "Today, 9:15 AM" },
-  { id: "p10", name: "Biscuits Family Pack", category: "other", unit: "pkts", qty: 33, threshold: 10, updated: "Today, 9:15 AM" },
-  { id: "p11", name: "Wheat Flour 10kg", category: "groceries", unit: "bags", qty: 27, threshold: 10, updated: "Today, 8:30 AM" },
-  { id: "p12", name: "Floor Cleaner 1L", category: "other", unit: "btls", qty: 7, threshold: 8, updated: "Yesterday, 6:10 PM" },
-  { id: "p13", name: "Tomatoes", category: "produce", unit: "kg", qty: 14, threshold: 8, updated: "Today, 7:50 AM" },
-  { id: "p14", name: "Bananas", category: "produce", unit: "dozen", qty: 3, threshold: 6, updated: "Today, 7:50 AM" },
+/* ------------------------------------------------------------------ *
+ * Wholesale purchases
+ *
+ * A few loads carrying a balance, so the ledger opens with something to
+ * settle. Dates are relative, so the seed stays current whenever it is run.
+ * ------------------------------------------------------------------ */
+
+export const SEED_PURCHASES: Purchase[] = [
+  {
+    id: "w1",
+    date: dateKeyOf(dayBack(0)),
+    supplier: "Ramesh Dairy",
+    item: "Milk crates x20",
+    amount: 3000,
+    paidUpfront: 2500,
+    payments: [],
+  },
+  {
+    id: "w2",
+    date: dateKeyOf(dayBack(1)),
+    supplier: "Ramesh Dairy",
+    item: "Milk crates x14",
+    amount: 2000,
+    paidUpfront: 2000,
+    payments: [],
+  },
+  {
+    id: "w3",
+    date: dateKeyOf(dayBack(2)),
+    supplier: "Kumar Wholesale",
+    item: "Rice 50kg + Toor dal 20kg",
+    amount: 7400,
+    paidUpfront: 4000,
+    payments: [{ id: "wp1", date: dateKeyOf(dayBack(1)), amount: 1400 }],
+  },
+  {
+    id: "w4",
+    date: dateKeyOf(dayBack(4)),
+    supplier: "Kumar Wholesale",
+    item: "Sunflower oil 30L",
+    amount: 4200,
+    paidUpfront: 4200,
+    payments: [],
+  },
+  {
+    id: "w5",
+    date: dateKeyOf(dayBack(5)),
+    supplier: "Anil Traders",
+    item: "Detergent + soap cartons",
+    amount: 2600,
+    paidUpfront: 1000,
+    payments: [{ id: "wp2", date: dateKeyOf(dayBack(3)), amount: 600 }],
+  },
+  {
+    id: "w6",
+    date: dateKeyOf(dayBack(8)),
+    supplier: "Anil Traders",
+    item: "Biscuit cartons x12",
+    amount: 1800,
+    paidUpfront: 1800,
+    payments: [],
+  },
 ];

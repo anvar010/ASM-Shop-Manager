@@ -57,6 +57,13 @@ export function formatDayMonth(d: Date): string {
   return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
 }
 
+/** "2026-08-17" -> "17 Aug". Parsed by hand so server and client agree. */
+export function formatDateKey(key: string): string {
+  const parts = key.split("-");
+  const month = MONTHS_SHORT[parseInt(parts[1], 10) - 1];
+  return month ? `${parseInt(parts[2], 10)} ${month}` : key;
+}
+
 /** "Saturday, 24 Aug" */
 export function formatLongDate(d: Date): string {
   return `${WEEKDAYS_LONG[d.getDay()]}, ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;

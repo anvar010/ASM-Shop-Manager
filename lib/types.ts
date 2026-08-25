@@ -10,6 +10,7 @@ export type ExpenseCategoryId =
 
 export type TabId = "bills" | "overview" | "expenses" | "stock";
 export type PeriodId = "today" | "week" | "month";
+export type PurchaseRangeId = "all" | "today" | "week" | "month" | "custom";
 
 export interface Category {
   id: CategoryId;
@@ -52,15 +53,27 @@ export interface Expense {
   time: string;
 }
 
-export interface Product {
+/** Money handed to the supplier after the purchase day, against one purchase. */
+export interface PurchasePayment {
   id: string;
-  name: string;
-  category: CategoryId;
-  unit: string;
-  qty: number;
-  /** low-stock alert fires at or below this */
-  threshold: number;
-  updated: string;
+  /** YYYY-MM-DD */
+  date: string;
+  amount: number;
+}
+
+/** One load of goods taken from a wholesaler, and what has been paid for it. */
+export interface Purchase {
+  id: string;
+  /** YYYY-MM-DD */
+  date: string;
+  supplier: string;
+  item: string;
+  /** value of the goods taken */
+  amount: number;
+  /** handed over at the counter on the purchase day */
+  paidUpfront: number;
+  /** later part-payments against this purchase, oldest first */
+  payments: PurchasePayment[];
 }
 
 export interface DayOption {

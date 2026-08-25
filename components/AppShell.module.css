@@ -21,6 +21,28 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* Drill-down pages trade the wordmark for a way back. */
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px 8px 9px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.backButton:hover {
+  background: var(--border);
+}
+
+.backIcon {
+  display: flex;
+  transform: rotate(90deg);
+}
+
 .brand {
   display: flex;
   align-items: center;

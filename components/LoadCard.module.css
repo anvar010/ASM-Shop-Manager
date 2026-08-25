@@ -1,0 +1,299 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 13px 14px 12px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* The left edge carries the state, so a scan down the column reads at a glance. */
+.due {
+  border-left-color: var(--warning);
+}
+
+.settled {
+  border-left-color: var(--success);
+}
+
+.editing {
+  border-color: var(--primary);
+  border-left-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+/* ---------------- Inline edit ---------------- */
+
+.editHead {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 11px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.fieldLabel {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  margin-bottom: 5px;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.editPair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.warning {
+  margin-top: 2px;
+  margin-bottom: 10px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.saveButton {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.saveButton:hover {
+  background: var(--primary-dark);
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.item {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.meta {
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.status {
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusDue {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.statusSettled {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+/* Total and Paid only — the balance is already stated by the badge. */
+.figures {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.figureValue {
+  font-size: 15px;
+  color: var(--text);
+  line-height: 1.15;
+}
+
+.figureLabel {
+  font-size: 10px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.figureRule {
+  width: 1px;
+  height: 22px;
+  background: var(--border);
+}
+
+.payLog {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 10px;
+  padding-left: 9px;
+  border-left: 2px solid var(--border);
+}
+
+.payLogRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+/* Pinned to the foot so cards sharing a grid row end on the same line. */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.payButton {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ghostButton {
+  flex: 1;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ghostButton:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.iconButton {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.iconButton:hover {
+  background: var(--border);
+}
+
+.iconDanger {
+  color: var(--danger);
+}
+
+.iconDanger:hover {
+  background: var(--danger-bg);
+}
+
+.payRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.payInput {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.payConfirm {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--success);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.payCancel {
+  flex-shrink: 0;
+  padding: 10px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+@media (min-width: 768px) {
+  .card {
+    padding: 15px 16px 14px;
+  }
+
+  .figureValue {
+    font-size: 16px;
+  }
+}

@@ -1,0 +1,157 @@
+.summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.summaryCard {
+  padding: 14px;
+}
+
+.summaryValue {
+  font-size: 20px;
+  color: var(--text);
+  line-height: 1.1;
+}
+
+.summaryLabel {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background: var(--surface);
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  flex: 1;
+  width: 100%;
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+/* Wraps rather than scrolls: an overflow container would clip the calendar
+   popover, which drops below this row. */
+.rangeRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rangeChip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 15px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.rangeChipActive {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.dueActive {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #fff;
+}
+
+/* Anchors the calendar popover to its chip. */
+.calWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .summary {
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .summaryCard {
+    padding: 18px;
+  }
+
+  .summaryValue {
+    font-size: 24px;
+  }
+
+  .filters {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .searchRow {
+    flex: 1;
+    padding: 13px 16px;
+  }
+
+  .searchInput {
+    font-size: 15px;
+  }
+
+  /* Anchors the calendar popover to its chip. */
+.calWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+  }
+}
+
+@media (min-width: 1280px) {
+  .summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  /* Anchors the calendar popover to its chip. */
+.calWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

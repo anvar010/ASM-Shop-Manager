@@ -5,6 +5,7 @@ import type {
   ExpenseCategoryId,
   PaymentMode,
   PaymentModeId,
+  PurchaseRangeId,
 } from "./types";
 
 export const CATEGORIES: Category[] = [
@@ -19,6 +20,14 @@ export const PAYMENT_MODES: PaymentMode[] = [
   { id: "credit", label: "Credit", note: "Taken now, paid later", color: "#C08A2E" },
 ];
 
+/** Date windows offered by the all-bills view of the purchase ledger. */
+export const PURCHASE_RANGES: { id: PurchaseRangeId; label: string }[] = [
+  { id: "all", label: "All time" },
+  { id: "today", label: "Today" },
+  { id: "week", label: "This week" },
+  { id: "month", label: "This month" },
+];
+
 export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { id: "supplier", label: "Supplier", color: "#C23B33" },
   { id: "rent", label: "Rent", color: "#C08A2E" },
@@ -27,8 +36,6 @@ export const EXPENSE_CATEGORIES: ExpenseCategory[] = [
   { id: "transport", label: "Transport", color: "#1E9E6B" },
   { id: "other", label: "Other", color: "#8B92A0" },
 ];
-
-export const UNITS = ["pkts", "btls", "bags", "kg", "pcs"];
 
 export const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "back"];
 

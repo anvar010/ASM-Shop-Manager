@@ -1,0 +1,194 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 35;
+  background: rgba(22, 24, 29, 0.4);
+}
+
+/*
+ * On a phone the chip sits near the left edge, so anchoring the panel to it
+ * would hang it off-screen. It becomes a centred sheet instead, sitting above
+ * the tab bar where a thumb reaches; from tablet up it is a normal popover.
+ */
+.panel {
+  position: fixed;
+  z-index: 40;
+  left: 50%;
+  bottom: calc(var(--nav-h) + 16px);
+  transform: translateX(-50%);
+  width: min(320px, calc(100vw - 28px));
+  max-height: calc(100dvh - var(--nav-h) - 96px);
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.monthLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.navButton:hover {
+  background: var(--border);
+}
+
+.prevIcon {
+  display: flex;
+  transform: rotate(90deg);
+}
+
+.nextIcon {
+  display: flex;
+  transform: rotate(-90deg);
+}
+
+.weekRow,
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.weekCell {
+  padding-bottom: 6px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.day {
+  position: relative;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.day:hover {
+  background: var(--surface-alt);
+}
+
+/* Days inside the chosen window; the two ends are filled solid. */
+.dayInRange {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border-radius: 0;
+}
+
+.dayEdge {
+  background: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+}
+
+.dayEdge:hover {
+  background: var(--primary-dark);
+}
+
+.dayToday {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+.dot {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 999px;
+  background: var(--warning);
+}
+
+.dayEdge .dot {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.foot {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.summary {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.footActions {
+  display: flex;
+  gap: 8px;
+}
+
+.clearButton,
+.doneButton {
+  flex: 1;
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.clearButton {
+  background: var(--surface-alt);
+  color: var(--text-muted);
+}
+
+.clearButton:hover {
+  background: var(--border);
+}
+
+.doneButton {
+  background: var(--primary);
+  color: #fff;
+}
+
+.doneButton:hover {
+  background: var(--primary-dark);
+}
+
+@media (min-width: 768px) {
+  .backdrop {
+    display: none;
+  }
+
+  .panel {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 8px);
+    right: 0;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: 292px;
+    max-height: none;
+    overflow-y: visible;
+  }
+}
