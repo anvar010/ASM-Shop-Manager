@@ -8,7 +8,7 @@ export type ExpenseCategoryId =
   | "transport"
   | "other";
 
-export type TabId = "bills" | "overview" | "expenses" | "stock";
+export type TabId = "bills" | "overview" | "credits" | "expenses" | "stock";
 export type PeriodId = "today" | "week" | "month";
 export type PurchaseRangeId = "all" | "today" | "week" | "month" | "custom";
 

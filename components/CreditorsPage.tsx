@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useShopContext } from "@/lib/shopContext";
+import { useShopContext, useUser } from "@/lib/shopContext";
 import { PURCHASE_RANGES } from "@/lib/constants";
 import { formatDateKey, formatINR } from "@/lib/format";
 import AppShell from "./AppShell";
@@ -12,6 +12,8 @@ import { IconAlert, IconBill, IconCalendar, IconChevron, IconSearch } from "./Ic
 
 export default function CreditorsPage() {
   const shop = useShopContext();
+  const user = useUser();
+  const isAdmin = user?.role === "admin";
   const [calOpen, setCalOpen] = useState(false);
   const [openNames, setOpenNames] = useState<string[]>([]);
   const calRef = useRef<HTMLDivElement | null>(null);
@@ -44,7 +46,14 @@ export default function CreditorsPage() {
   }
 
   return (
-    <AppShell title="Credit Customers" back={{ href: "/", label: "Overview", tab: "overview" }}>
+    <AppShell
+      title="Credit Customers"
+      back={
+        isAdmin
+          ? { href: "/", label: "Overview", tab: "overview" }
+          : { href: "/", label: "Bills", tab: "bills" }
+      }
+    >
       <div className={s.rowBetween} style={{ marginBottom: 12 }}>
         <div className={s.sectionLabel}>Credit customers</div>
         <div className={s.muted}>
@@ -52,6 +61,7 @@ export default function CreditorsPage() {
         </div>
       </div>
 
+      {isAdmin && (
       <section className={`${s.banner} ${s.bannerPrimary}`} style={{ marginBottom: 12 }}>
         <div className={s.bannerLabel}>Owed to you</div>
         <div className={`num ${s.bannerValue}`}>{formatINR(shop.creditorsOwed)}</div>
@@ -60,6 +70,7 @@ export default function CreditorsPage() {
           {shop.creditorGroups.length > 0 && ` · ${shop.creditorGroups.length} owing`}
         </div>
       </section>
+      )}
 
       <div className={c.filters}>
         <div className={c.searchRow}>

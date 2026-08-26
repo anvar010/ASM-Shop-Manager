@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { readSession, SESSION_COOKIE } from "@/lib/session-token";
 
 /** Pages a staff account may not open, whatever they type in the address bar. */
-const ADMIN_ONLY = ["/credits", "/overview-report"];
+const ADMIN_ONLY = ["/overview-report"];
 
 export default async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;

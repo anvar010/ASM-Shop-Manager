@@ -9,20 +9,33 @@ import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
 import NotificationToggle, { NotificationBell } from "./NotificationToggle";
-import { IconBill, IconBox, IconChevron, IconNote, IconTrend } from "./Icons";
+import { IconBill, IconBox, IconChevron, IconNote, IconTrend, IconUsers } from "./Icons";
 
-type Tab = { id: TabId; label: string; title: string; Icon: typeof IconBill; adminOnly?: boolean };
+type Tab = {
+  id: TabId;
+  label: string;
+  title: string;
+  Icon: typeof IconBill;
+  adminOnly?: boolean;
+  /* Staff take credit payments at the counter, so they get a tab for it. The
+     owner reaches the same page from Overview and already has four tabs. */
+  staffOnly?: boolean;
+  /** A tab that opens its own route rather than switching panel. */
+  href?: string;
+};
 
 export const TABS: Tab[] = [
   { id: "bills", label: "Bills", title: "Daily Bills", Icon: IconBill },
   { id: "overview", label: "Overview", title: "Overview", Icon: IconTrend, adminOnly: true },
+  { id: "credits", label: "Credits", title: "Credit Customers", Icon: IconUsers, staffOnly: true, href: "/credits" },
   { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote, adminOnly: true },
   { id: "stock", label: "Stock", title: "Stock Purchases", Icon: IconBox },
 ];
 
-/** Staff keep to takings and stock; the rest is the owner's business. */
+/** Staff keep to takings, credit and stock; the rest is the owner's business. */
 export function tabsFor(role: string | undefined): Tab[] {
-  return role === "admin" ? TABS : TABS.filter((t) => !t.adminOnly);
+  const admin = role === "admin";
+  return TABS.filter((t) => (admin ? !t.staffOnly : !t.adminOnly));
 }
 
 /**
@@ -85,8 +98,12 @@ export default function AppShell({
   const pathname = usePathname();
   const onHome = pathname === "/";
 
-  function openTab(id: TabId) {
-    shop.setActiveTab(id);
+  function openTab(tab: Tab) {
+    if (tab.href) {
+      router.push(tab.href);
+      return;
+    }
+    shop.setActiveTab(tab.id);
     if (!onHome) router.push("/");
   }
 
@@ -166,14 +183,15 @@ export default function AppShell({
       )}
 
       <nav className={styles.nav} aria-label="Main">
-        {tabs.map(({ id, label, Icon }) => {
-          const active = onHome && shop.activeTab === id;
+        {tabs.map((tab) => {
+          const { id, label, Icon } = tab;
+          const active = tab.href ? pathname === tab.href : onHome && shop.activeTab === id;
           return (
             <button
               key={id}
               type="button"
               className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
-              onClick={() => openTab(id)}
+              onClick={() => openTab(tab)}
               aria-current={active ? "page" : undefined}
             >
               <Icon size={21} color="currentColor" />
