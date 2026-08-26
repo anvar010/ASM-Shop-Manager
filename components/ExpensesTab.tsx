@@ -1,22 +1,99 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { Shop } from "@/lib/useShop";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import { formatINR } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./ExpensesTab.module.css";
-import { IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
+import CalendarFilter from "./CalendarFilter";
+import { IconCalendar, IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function ExpensesTab({ shop }: { shop: Shop }) {
   const editing = shop.editingExpenseId !== null;
+  const [calOpen, setCalOpen] = useState(false);
+  const calRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!calOpen) return;
+    function onDown(e: MouseEvent) {
+      if (!calRef.current?.contains(e.target as Node)) setCalOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [calOpen]);
+
   return (
+    <div>
+      {/* The last week at a glance, each day carrying its own spend, with the
+          calendar for anything older. */}
+      <div className={c.dayBar}>
+        <div className={`${c.dayStrip} scrollX`}>
+          {shop.expenseDayChips.map((d) => (
+            <button
+              key={d.key}
+              type="button"
+              className={`${c.dayChip} ${d.active ? c.dayChipActive : ""}`}
+              onClick={() => shop.setExpenseDate(d.key)}
+              aria-pressed={d.active}
+            >
+              <div className={c.dayShort}>{d.short}</div>
+              <div className={c.daySub}>{d.sub}</div>
+              <div className={`num ${c.dayTotal}`}>{d.totalLabel}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className={c.calWrap} ref={calRef}>
+          <button
+            type="button"
+            className={`${c.calChip} ${
+              shop.expenseDayChips.every((d) => !d.active) ? c.calChipActive : ""
+            }`}
+            onClick={() => setCalOpen(!calOpen)}
+            aria-expanded={calOpen}
+          >
+            <IconCalendar size={14} color="currentColor" />
+            {shop.expenseDayChips.every((d) => !d.active) ? shop.expenseDay.sub : "Older"}
+          </button>
+          {calOpen && (
+            <CalendarFilter
+              window={{ from: shop.expenseDate, to: shop.expenseDate }}
+              custom
+              marked={shop.expenseDates}
+              onPick={(key) => shop.setExpenseDate(key)}
+              onClear={() => shop.setExpenseDate(shop.expenseDayChips[0].key)}
+              onDone={() => setCalOpen(false)}
+            />
+          )}
+        </div>
+      </div>
+
+      {!shop.isExpenseToday && (
+        <div className={c.pastBar}>
+          <div className={`${c.pastText} ${s.truncate}`}>
+            Viewing {shop.expenseDay.short}, {shop.expenseDay.sub} — new entries still go to today
+          </div>
+          <button
+            type="button"
+            className={`${s.linkButton} tap`}
+            onClick={() => shop.setExpenseDate(shop.expenseDayChips[0].key)}
+          >
+            Back to today
+          </button>
+        </div>
+      )}
+
     <div className={c.layout}>
       <div className={c.col} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <section className={`${s.banner} ${s.bannerDark}`}>
-          <div className={s.bannerLabel}>Total spent today</div>
-          <div className={`num ${s.bannerValue}`}>{formatINR(shop.expenseTotal)}</div>
           <div className={s.bannerLabel}>
-            {shop.expenseRows.length} {shop.expenseRows.length === 1 ? "entry" : "entries"} today
+            {shop.isExpenseToday ? "Total spent today" : `Spent ${shop.expenseDay.long}`}
+          </div>
+          <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewExpenseTotal)}</div>
+          <div className={s.bannerLabel}>
+            {shop.expenseRows.length} {shop.expenseRows.length === 1 ? "entry" : "entries"}
+            {shop.isExpenseToday ? " today" : ""}
           </div>
           <div className={s.bannerRule} />
           <div className={s.rowBetween}>
@@ -95,7 +172,9 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
 
       <section className={s.card}>
         <div className={s.rowBetween} style={{ marginBottom: 14 }}>
-          <div className={s.cardTitle}>Today&apos;s spending</div>
+          <div className={s.cardTitle}>
+            {shop.isExpenseToday ? "Today's spending" : `Spending on ${shop.expenseDay.sub}`}
+          </div>
           <div className={s.muted}>
             {shop.expenseRows.length} {shop.expenseRows.length === 1 ? "entry" : "entries"}
           </div>
@@ -172,5 +251,6 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
         )}
       </section>
     </div>
+      </div>
   );
 }

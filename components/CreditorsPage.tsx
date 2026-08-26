@@ -242,7 +242,7 @@ export default function CreditorsPage() {
                                 className={c.settlePart}
                                 onClick={() => shop.startSettling(b.id)}
                               >
-                                Part
+                                Received
                               </button>
                             </div>
                           )}

@@ -76,6 +76,9 @@ export function useShop(signedIn: boolean) {
   const [expDesc, setExpDesc] = useState("");
   const [expCategory, setExpCategory] = useState<ExpenseCategoryId>("supplier");
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  /* Which day the Expenses tab is showing. Entering always writes to today;
+     this only decides what is listed. */
+  const [expenseDate, setExpenseDate] = useState(todayKey);
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [purchaseSearch, setPurchaseSearch] = useState("");
@@ -241,6 +244,39 @@ export function useShop(signedIn: boolean) {
     () => expenses.filter((e) => e.date === today),
     [expenses, today],
   );
+
+  /* The day on screen, which is today unless another was picked. */
+  const viewExpenses = useMemo(
+    () => expenses.filter((e) => e.date === expenseDate),
+    [expenses, expenseDate],
+  );
+  const isExpenseToday = expenseDate === today;
+  const viewExpenseTotal = useMemo(
+    () => viewExpenses.reduce((s, e) => s + e.amount, 0),
+    [viewExpenses],
+  );
+  const expenseDay = DAY_OPTIONS.find((d) => d.key === expenseDate) ?? {
+    key: expenseDate,
+    short: formatDateKey(expenseDate),
+    sub: formatDateKey(expenseDate),
+    long: formatDateKey(expenseDate),
+  };
+
+  /** The last seven days, each carrying its own spend. */
+  const expenseDayChips = useMemo(
+    () =>
+      DAY_OPTIONS.map((d) => ({
+        ...d,
+        active: expenseDate === d.key,
+        totalLabel: formatINR(
+          expenses.reduce((s, e) => (e.date === d.key ? s + e.amount : s), 0),
+        ),
+      })),
+    [expenses, expenseDate, DAY_OPTIONS],
+  );
+
+  /** Days that carry an expense, for the calendar's markers. */
+  const expenseDates = useMemo(() => new Set(expenses.map((e) => e.date)), [expenses]);
   const expenseTotal = useMemo(
     () => todaysExpenses.reduce((s, e) => s + e.amount, 0),
     [todaysExpenses],
@@ -405,11 +441,11 @@ export function useShop(signedIn: boolean) {
 
   const expenseRows = useMemo(
     () =>
-      todaysExpenses.map((e) => {
+      viewExpenses.map((e) => {
         const cat = expenseMeta(e.category);
         return { ...e, catLabel: cat.label, catColor: cat.color, amountLabel: formatINR(e.amount) };
       }),
-    [todaysExpenses],
+    [viewExpenses],
   );
 
   /* A purchase is settled once the upfront payment plus every later
@@ -1294,6 +1330,13 @@ export function useShop(signedIn: boolean) {
 
     // expenses
     expenseRows,
+    expenseDate,
+    setExpenseDate,
+    expenseDayChips,
+    expenseDates,
+    expenseDay,
+    isExpenseToday,
+    viewExpenseTotal,
     expAmount,
     setExpAmount,
     expDesc,
