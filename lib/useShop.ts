@@ -4,7 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
 import { buildPeriod, PERIOD_META } from "./periods";
-import { api, loadLedger, setApiErrorHandler, setDesyncHandler } from "./api";
+import {
+  api,
+  ledgerVersion,
+  loadLedger,
+  setApiErrorHandler,
+  setDesyncHandler,
+} from "./api";
 import { dateKeyOf, dayBack, dayOptions, todayKey } from "./seed";
 import type {
   Bill,
@@ -130,6 +136,44 @@ export function useShop(signedIn: boolean) {
    * the moment someone looks. This costs nothing while idle, and less than the
    * full reload that reopening the app performs today.
    */
+  /*
+   * While the screen is open and being watched, ask only whether anything has
+   * changed — a fingerprint of a few bytes — and read the ledger itself only
+   * when the answer differs. A screen someone is staring at therefore costs
+   * almost nothing, and a screen nobody is looking at costs literally nothing:
+   * the timer is cleared the moment the app is hidden.
+   */
+  useEffect(() => {
+    if (!signedIn) return;
+    let version: string | null = null;
+    let timer: ReturnType<typeof setInterval> | undefined;
+
+    const check = async () => {
+      const next = await ledgerVersion();
+      if (next === null) return;
+      if (version !== null && next !== version) await refresh();
+      version = next;
+    };
+
+    const start = () => {
+      if (timer) return;
+      void check();
+      timer = setInterval(check, 30_000);
+    };
+    const stop = () => {
+      clearInterval(timer);
+      timer = undefined;
+    };
+
+    const onVisibility = () => (document.visibilityState === "visible" ? start() : stop());
+    onVisibility();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [signedIn, refresh]);
+
   useEffect(() => {
     if (!signedIn) return;
 

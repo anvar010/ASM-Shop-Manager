@@ -79,6 +79,17 @@ export async function loadLedger(): Promise<{
   }
 }
 
+/** The ledger's fingerprint, or null if it could not be read. */
+export async function ledgerVersion(): Promise<string | null> {
+  try {
+    const res = await fetch("/api/data/version", { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()).v ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export const api = {
   addBill: (bill: Bill) => send("/api/bills", json(bill), "the bill"),
   updateBill: (bill: Bill) =>
