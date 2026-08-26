@@ -159,6 +159,18 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 )}
               </div>
 
+              <div className={s.fieldLabel} style={{ marginTop: 12 }}>
+                Date taken
+              </div>
+              <input
+                className={s.input}
+                type="date"
+                value={shop.formDate}
+                max={shop.dayChips[0].key}
+                onChange={(e) => shop.setFormDate(e.target.value || shop.dayChips[0].key)}
+                aria-label="Date the credit was taken"
+              />
+
               {shop.customerExact ? (
                 <div className={c.matchNote}>
                   Adding to <strong>{shop.customerExact.customer}</strong>&apos;s tab —{" "}

@@ -61,6 +61,9 @@ export function useShop(signedIn: boolean) {
   const [formCustomer, setFormCustomer] = useState("");
   /** Set while the bill form is changing an existing sale rather than adding one. */
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
+  /* Credit is often written up after the fact, so the date is editable. It
+     starts on today and returns there once the bill is saved. */
+  const [formDate, setFormDate] = useState(todayKey);
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [expAmount, setExpAmount] = useState("");
@@ -714,7 +717,8 @@ export function useShop(signedIn: boolean) {
     setFormAmount("");
     setFormDesc("");
     setFormCustomer("");
-  }, []);
+    setFormDate(today);
+  }, [today]);
 
   /** Adds a sale, or saves the one being edited. */
   const saveBill = useCallback(() => {
@@ -736,6 +740,7 @@ export function useShop(signedIn: boolean) {
       if (!current) return;
       const next: Bill = {
         ...current,
+        date: formDate || current.date,
         desc: formDesc.trim() || "Sale",
         category: formCategory,
         amount: amt,
@@ -752,7 +757,7 @@ export function useShop(signedIn: boolean) {
 
     const bill: Bill = {
       id: newId("b"),
-      date: today,
+      date: formDate || today,
       desc: formDesc.trim() || "Sale",
       category: formCategory,
       amount: amt,
@@ -765,6 +770,7 @@ export function useShop(signedIn: boolean) {
     resetBillForm();
   }, [
     today,
+    formDate,
     editingBillId,
     bills,
     formAmount,
@@ -792,6 +798,7 @@ export function useShop(signedIn: boolean) {
       const bill = bills.find((b) => b.id === id);
       if (!bill) return;
       setEditingBillId(id);
+      setFormDate(bill.date);
       setFormAmount(String(bill.amount));
       setFormDesc(bill.desc);
       setFormCategory(bill.category);
@@ -1192,6 +1199,8 @@ export function useShop(signedIn: boolean) {
     setFormMode,
     formCustomer,
     setFormCustomer,
+    formDate,
+    setFormDate,
     customerStats,
     customerMatches,
     customerExact,

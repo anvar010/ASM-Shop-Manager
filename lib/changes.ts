@@ -1,5 +1,5 @@
 import { CATEGORIES, EXPENSE_CATEGORIES, PAYMENT_MODES } from "./constants";
-import { formatINR } from "./format";
+import { formatDateKey, formatINR } from "./format";
 import { sendToAdmin } from "./mail";
 
 /*
@@ -28,7 +28,10 @@ const label = (list: { id: string; label: string }[]) => (v: unknown) =>
 const plain = (v: unknown) =>
   v === null || v === undefined || v === "" ? "—" : String(v);
 
+const dayLabel = (v: unknown) => (v ? formatDateKey(String(v)) : "—");
+
 export const BILL_FIELDS: FieldSpec<Record<string, unknown>>[] = [
+  { key: "date", label: "Date", format: dayLabel },
   { key: "desc", label: "Description", format: plain },
   { key: "amount", label: "Amount", format: money },
   { key: "category", label: "Category", format: label(CATEGORIES) },

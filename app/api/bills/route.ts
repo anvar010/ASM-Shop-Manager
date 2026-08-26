@@ -51,14 +51,15 @@ export async function PATCH(request: Request) {
     /* Read the row first: once the UPDATE lands the old values are gone, and
        an alert that cannot say what the figure used to be is of little use. */
     const [existing] = await db().query(
-      "SELECT description AS `desc`, amount, category, mode, customer, sold_on FROM bills WHERE id = ?",
+      "SELECT description AS `desc`, amount, category, mode, customer, sold_on AS date FROM bills WHERE id = ?",
       [bill.id],
     );
     const before = (existing as Record<string, unknown>[])[0];
     await db().execute(
-      `UPDATE bills SET sold_at = ?, description = ?, category = ?, amount = ?, mode = ?, customer = ?
+      `UPDATE bills SET sold_on = ?, sold_at = ?, description = ?, category = ?, amount = ?, mode = ?, customer = ?
        WHERE id = ?`,
       [
+        bill.date,
         timeToSql(bill.time),
         bill.desc,
         bill.category,
@@ -77,7 +78,7 @@ export async function PATCH(request: Request) {
       await sendChangeAlert({
         kind: "Bill",
         title: String(before.desc ?? "Sale"),
-        when: `${formatDateKey(String(before.sold_on))} · ${bill.time}`,
+        when: `${formatDateKey(String(before.date))} · ${bill.time}`,
         actorName: user.name,
         actorRole: user.role === "admin" ? "owner" : "staff",
         changes: diff(before, { ...bill, customer: credit ? bill.customer : null }, BILL_FIELDS),
