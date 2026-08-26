@@ -66,6 +66,30 @@ function finishPeriod(
   };
 }
 
+/** The day before a YYYY-MM-DD key, computed without touching the local clock. */
+function dayBeforeKey(key: string): string {
+  const [y, m, d] = key.split("-").map(Number);
+  const prev = new Date(Date.UTC(y, m - 1, d - 1));
+  const pad = (n: number) => (n < 10 ? "0" + n : String(n));
+  return `${prev.getUTCFullYear()}-${pad(prev.getUTCMonth() + 1)}-${pad(prev.getUTCDate())}`;
+}
+
+/**
+ * One chosen day, shaped exactly like a period so every figure downstream —
+ * the chart, the splits, the day list — works on it unchanged.
+ */
+export function buildDay(key: string, bills: Bill[], label: string): PeriodStats {
+  const list = bills.filter((b) => b.date === key);
+  return finishPeriod(
+    label,
+    list,
+    bills.filter((b) => b.date === dayBeforeKey(key)),
+    todayTrend(list),
+    TODAY_BUCKETS.map((b) => b.label),
+    "the day before",
+  );
+}
+
 export function buildPeriod(kind: PeriodId, bills: Bill[], todaysBills: Bill[]): PeriodStats {
   if (kind === "week") {
     const trend: number[] = [];

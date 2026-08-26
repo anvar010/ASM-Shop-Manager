@@ -1,13 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { useShopContext } from "@/lib/shopContext";
 import type { PeriodId } from "@/lib/types";
-import { formatINR } from "@/lib/format";
+import { formatDateKey, formatINR } from "@/lib/format";
 import AppShell from "./AppShell";
 import s from "./shared.module.css";
 import c from "./OverviewReport.module.css";
-import { IconTrend } from "./Icons";
+import CalendarFilter from "./CalendarFilter";
+import { IconCalendar, IconTrend } from "./Icons";
 
 const PERIODS: { id: PeriodId; label: string }[] = [
   { id: "today", label: "Today" },
@@ -18,6 +20,19 @@ const PERIODS: { id: PeriodId; label: string }[] = [
 export default function OverviewReport() {
   const shop = useShopContext();
   const { periodStats } = shop;
+  const [calOpen, setCalOpen] = useState(false);
+  const calRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!calOpen) return;
+    function onDown(e: MouseEvent) {
+      if (!calRef.current?.contains(e.target as Node)) setCalOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [calOpen]);
+
+  const onDay = shop.reportDate !== null;
   const compareColor = !periodStats.has
     ? "var(--text-faint)"
     : periodStats.up
@@ -31,19 +46,46 @@ export default function OverviewReport() {
         <div className={s.muted}>{periodStats.bills} bills</div>
       </div>
 
-      <div className={c.periodToggle} role="tablist" aria-label="Period">
-        {PERIODS.map((p) => (
+      <div className={c.periodRow}>
+        <div className={c.periodToggle} role="tablist" aria-label="Period">
+          {PERIODS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="tab"
+              aria-selected={!onDay && shop.period === p.id}
+              className={`${c.periodButton} ${
+                !onDay && shop.period === p.id ? c.periodActive : ""
+              }`}
+              onClick={() => shop.choosePeriod(p.id)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Outside the toggle, so the popover is not clipped by it. */}
+        <div className={c.calWrap} ref={calRef}>
           <button
-            key={p.id}
             type="button"
-            role="tab"
-            aria-selected={shop.period === p.id}
-            className={`${c.periodButton} ${shop.period === p.id ? c.periodActive : ""}`}
-            onClick={() => shop.setPeriod(p.id)}
+            className={`${c.calChip} ${onDay ? c.calChipActive : ""}`}
+            onClick={() => setCalOpen(!calOpen)}
+            aria-expanded={calOpen}
           >
-            {p.label}
+            <IconCalendar size={14} color="currentColor" />
+            {onDay ? formatDateKey(shop.reportDate!) : "Pick a day"}
           </button>
-        ))}
+          {calOpen && (
+            <CalendarFilter
+              window={{ from: shop.reportDate ?? "", to: shop.reportDate ?? "" }}
+              custom={onDay}
+              marked={shop.billDates}
+              onPick={(key) => shop.setReportDate(key)}
+              onClear={() => shop.choosePeriod(shop.period)}
+              onDone={() => setCalOpen(false)}
+            />
+          )}
+        </div>
       </div>
 
       <section className={`${s.banner} ${s.bannerPrimary}`} style={{ marginBottom: 12 }}>

@@ -1,10 +1,44 @@
+.periodRow {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .periodToggle {
   display: flex;
+  flex: 1;
+  min-width: 0;
   gap: 4px;
   background: var(--surface-alt);
   padding: 3px;
   border-radius: 999px;
-  margin-bottom: 12px;
+}
+
+.calWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.calChip {
+  height: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.calChipActive {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 
 .periodButton {

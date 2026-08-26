@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
-import { buildPeriod, PERIOD_META } from "./periods";
+import { buildDay, buildPeriod, PERIOD_META } from "./periods";
 import {
   api,
   ledgerVersion,
@@ -57,6 +57,9 @@ export function useShop(signedIn: boolean) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [period, setPeriod] = useState<PeriodId>("today");
+  /* A specific day chosen on the report's calendar. While set it overrides the
+     Today/Week/Month toggle, and picking a preset clears it. */
+  const [reportDate, setReportDate] = useState<string | null>(null);
 
   const [bills, setBills] = useState<Bill[]>([]);
   const [selectedDate, setSelectedDate] = useState(todayKey);
@@ -284,13 +287,17 @@ export function useShop(signedIn: boolean) {
   const profit = todayTotal - expenseTotal;
 
   const periodStats = useMemo(
-    () => buildPeriod(period, bills, todaysBills),
-    [period, bills, todaysBills],
+    () =>
+      reportDate
+        ? buildDay(reportDate, bills, formatDateKey(reportDate))
+        : buildPeriod(period, bills, todaysBills),
+    [reportDate, period, bills, todaysBills],
   );
 
   const periodAvgPerDay = useMemo(
-    () => Math.round(periodStats.total / PERIOD_META[period].days),
-    [periodStats, period],
+    // A single chosen day spans one day, whatever the toggle last said.
+    () => Math.round(periodStats.total / (reportDate ? 1 : PERIOD_META[period].days)),
+    [periodStats, period, reportDate],
   );
 
   /* Strongest bucket of the current trend: an hour block today, a weekday
@@ -301,10 +308,10 @@ export function useShop(signedIn: boolean) {
       if (v > periodStats.trend[best]) best = i;
     });
     return {
-      title: PERIOD_META[period].bestTitle,
+      title: reportDate ? "Busiest hours" : PERIOD_META[period].bestTitle,
       label: periodStats.total > 0 ? periodStats.trendLabels[best] : "—",
     };
-  }, [periodStats, period]);
+  }, [periodStats, period, reportDate]);
 
   /** How the period's takings split across cash, UPI and credit. */
   const periodPaymentSplit = useMemo(
@@ -551,6 +558,9 @@ export function useShop(signedIn: boolean) {
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
     [bills],
   );
+
+  /** Days that carry a sale, for the report calendar's markers. */
+  const billDates = useMemo(() => new Set(bills.map((b) => b.date)), [bills]);
 
   const creditDates = useMemo(() => new Set(creditBills.map((b) => b.date)), [creditBills]);
 
@@ -1281,6 +1291,15 @@ export function useShop(signedIn: boolean) {
     setActiveTab,
     period,
     setPeriod,
+    reportDate,
+    setReportDate,
+    /* Choosing a preset must drop the chosen day, or the toggle would appear
+       to do nothing. */
+    choosePeriod: (id: PeriodId) => {
+      setReportDate(null);
+      setPeriod(id);
+    },
+    billDates,
 
     // period / overview
     periodStats,
