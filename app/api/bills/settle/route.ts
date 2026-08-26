@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { currentUser } from "@/lib/session";
 import { sendSettlementAlert } from "@/lib/changes";
+import { pushToAdmins } from "@/lib/push";
 import { formatINR } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +37,17 @@ export async function POST(request: Request) {
       const owed = Number(bill.owed);
       const left = Math.max(0, owed - Number(amount));
       const who = String(bill.customer ?? "Unnamed");
+      await pushToAdmins({
+        title: left === 0 ? `${who} cleared their tab` : `${who} paid ${formatINR(Number(amount))}`,
+        body:
+          left === 0
+            ? `${formatINR(Number(amount))} received — nothing left owing.`
+            : `${formatINR(Number(amount))} received · ${formatINR(left)} still owing.`,
+        url: "/credits",
+        // One tag per customer: a second payment updates the first notice.
+        tag: `credit-${who}`,
+      });
+
       await sendSettlementAlert({
         badge: left === 0 ? "Credit cleared" : "Credit part-paid",
         title: `${who} paid ${formatINR(Number(amount))}`,

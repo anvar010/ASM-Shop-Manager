@@ -2,7 +2,7 @@
  * Bumping this name is what retires an old cache: the activate handler below
  * deletes every cache that is not the current one.
  */
-const CACHE = "asm-shell-v5";
+const CACHE = "asm-shell-v6";
 
 /*
  * Static assets only. Pages must not be precached: fetching them while signed
@@ -89,5 +89,50 @@ self.addEventListener("fetch", (event) => {
           return response;
         }),
     ),
+  );
+});
+
+/* ------------------------------------------------------------------ *
+ * Notifications
+ * ------------------------------------------------------------------ */
+
+self.addEventListener("push", (event) => {
+  /* A push with no readable body still has to show something: browsers
+     require a notification for every push received, or they revoke the
+     permission after a few silent ones. */
+  let data = { title: "ASM Shop", body: "Something changed in your shop." };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    /* keep the fallback */
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      // Same tag replaces the previous one rather than stacking a pile up.
+      tag: data.tag || "asm",
+      data: { url: data.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || "/";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      // Reuse an open window instead of stacking another copy of the app.
+      for (const w of windows) {
+        if ("focus" in w) {
+          w.navigate?.(target);
+          return w.focus();
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
   );
 });

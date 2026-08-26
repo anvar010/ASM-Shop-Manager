@@ -8,6 +8,7 @@ import { useShopContext, useUser } from "@/lib/shopContext";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
+import NotificationToggle from "./NotificationToggle";
 import { IconBill, IconBox, IconChevron, IconNote, IconTrend } from "./Icons";
 
 type Tab = { id: TabId; label: string; title: string; Icon: typeof IconBill; adminOnly?: boolean };
@@ -57,6 +58,7 @@ function AccountMenu() {
             <div className={styles.accountRole}>
               {user?.role === "admin" ? "Owner · full access" : "Staff · bills and stock"}
             </div>
+            {user?.role === "admin" && <NotificationToggle />}
             <button type="button" className={styles.signOut} onClick={signOut}>
               Sign out
             </button>
