@@ -117,6 +117,41 @@ export function useShop(signedIn: boolean) {
     return true;
   }, []);
 
+  /** Re-read the ledger in the background, leaving the screen up meanwhile. */
+  const refresh = useCallback(() => loadLedger().then(applyLedger), [applyLedger]);
+
+  /*
+   * Two people work this book at once, so a screen left open goes stale. It is
+   * re-read whenever the app is actually being looked at again — returning
+   * from another app, or unlocking the phone.
+   *
+   * Deliberately not a timer: polling spends a request every interval on every
+   * device whether or not anyone is watching, and the moment that matters is
+   * the moment someone looks. This costs nothing while idle, and less than the
+   * full reload that reopening the app performs today.
+   */
+  useEffect(() => {
+    if (!signedIn) return;
+
+    let last = Date.now();
+    const wake = () => {
+      if (document.visibilityState !== "visible") return;
+      // Returning to an app fires focus and visibilitychange together, and a
+      // glance away and back should not re-read anything.
+      const now = Date.now();
+      if (now - last < 5000) return;
+      last = now;
+      refresh();
+    };
+
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+    return () => {
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("focus", wake);
+    };
+  }, [signedIn, refresh]);
+
   useEffect(() => {
     if (!signedIn) {
       setLoading(false);
@@ -1151,6 +1186,7 @@ export function useShop(signedIn: boolean) {
     loadError,
     saveError,
     dismissSaveError: () => setSaveError(null),
+    refresh,
 
     // navigation
     activeTab,
