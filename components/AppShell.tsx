@@ -8,7 +8,7 @@ import { useShopContext, useUser } from "@/lib/shopContext";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
-import NotificationToggle from "./NotificationToggle";
+import NotificationToggle, { NotificationBell } from "./NotificationToggle";
 import { IconBill, IconBox, IconChevron, IconNote, IconTrend } from "./Icons";
 
 type Tab = { id: TabId; label: string; title: string; Icon: typeof IconBill; adminOnly?: boolean };
@@ -125,6 +125,7 @@ export default function AppShell({
         </div>
         <div className={styles.headerRight}>
           <div className={styles.headerDate}>{formatLongDate(new Date())}</div>
+          {user?.role === "admin" && <NotificationBell />}
           <AccountMenu />
         </div>
       </header>

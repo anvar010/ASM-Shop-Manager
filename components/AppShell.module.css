@@ -371,24 +371,31 @@
   margin-top: 2px;
 }
 
-.notifyButton {
-  width: 100%;
-  margin-top: 10px;
-  padding: 9px;
-  border-radius: var(--radius-sm);
-  background: var(--primary-light);
-  color: var(--primary-dark);
-  font-size: 12px;
-  font-weight: 700;
+/* Sits beside the avatar so it is found without opening a menu. */
+.bell {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.notifyOn {
+.bell:hover {
+  background: var(--border);
+}
+
+.bellOn {
   background: var(--success-bg);
   color: var(--success);
 }
 
-.notifyButton:disabled {
-  opacity: 0.6;
+.bell:disabled {
+  opacity: 0.55;
 }
 
 .notifyNote {

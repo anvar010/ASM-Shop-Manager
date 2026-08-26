@@ -136,6 +136,24 @@ export function IconUsers({ size = 20, color = "currentColor", style }: IconProp
   );
 }
 
+export function IconBell({ size = 20, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <path d="M18 8.5a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16s-2-1.5-2-6.5" />
+      <path d="M10.4 19a1.9 1.9 0 0 0 3.2 0" />
+    </svg>
+  );
+}
+
+export function IconBellOff({ size = 20, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <path d="M8.7 3.9A6 6 0 0 1 18 8.5c0 2.2.4 3.8.9 4.9M6.2 6.2A6 6 0 0 0 6 8.5c0 5-2 6.5-2 6.5h12" />
+      <path d="M10.4 19a1.9 1.9 0 0 0 3.2 0M3 3l18 18" />
+    </svg>
+  );
+}
+
 export function IconCalendar({ size = 16, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">
