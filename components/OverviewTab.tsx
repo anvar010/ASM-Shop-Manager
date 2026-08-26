@@ -165,7 +165,11 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
               </div>
               <div style={{ minWidth: 0 }}>
                 <div className={`num ${c.statValue}`}>{formatINR(shop.todayCash)}</div>
-                <div className={c.statLabel}>Cash in drawer</div>
+                <div className={c.statLabel}>
+                  {shop.expenseTotal > 0
+                    ? `Cash in drawer · ${formatINR(shop.expenseTotal)} spent`
+                    : "Cash in drawer"}
+                </div>
               </div>
             </div>
           </div>

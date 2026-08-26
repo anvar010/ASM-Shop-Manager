@@ -398,14 +398,22 @@ export function useShop(signedIn: boolean) {
     [viewBills, viewTotal],
   );
 
-  const cashInDrawer = useMemo(
+  /* Expenses are paid out of the till, so they come off the cash actually in
+     hand — not off the day's takings, which are what was sold. */
+  const viewCashSales = useMemo(
     () => viewBills.reduce((s, b) => (b.mode === "cash" ? s + b.amount : s), 0),
     [viewBills],
   );
-  const todayCash = useMemo(
+  const viewExpensesPaid = useMemo(
+    () => expenses.reduce((s, e) => (e.date === selectedDate ? s + e.amount : s), 0),
+    [expenses, selectedDate],
+  );
+  const cashInDrawer = viewCashSales - viewExpensesPaid;
+  const todayCashSales = useMemo(
     () => todaysBills.reduce((s, b) => (b.mode === "cash" ? s + b.amount : s), 0),
     [todaysBills],
   );
+  const todayCash = todayCashSales - expenseTotal;
 
   /* Credit is billed but not collected, so it is tracked apart from the drawer. */
   const creditTotal = useMemo(
@@ -1289,6 +1297,7 @@ export function useShop(signedIn: boolean) {
     expenseTotal,
     profit,
     todayCash,
+    todayCashSales,
     todayRows,
     goAddBill,
     goAddExpense,
@@ -1305,6 +1314,8 @@ export function useShop(signedIn: boolean) {
     billRows,
     paymentSplit,
     cashInDrawer,
+    viewCashSales,
+    viewExpensesPaid,
     formAmount,
     setFormAmount,
     formDesc,

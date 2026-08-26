@@ -407,6 +407,15 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 {formatINR(shop.cashInDrawer)}
               </div>
             </div>
+            {/* Show the working, so a drawer smaller than the day's cash sales
+                reads as money spent rather than money missing. */}
+            {shop.viewExpensesPaid > 0 && (
+              <div className={s.rowBetween} style={{ marginTop: 4 }}>
+                <div className={s.bannerLabel}>
+                  {formatINR(shop.viewCashSales)} cash in, {formatINR(shop.viewExpensesPaid)} spent
+                </div>
+              </div>
+            )}
             {shop.creditTotal > 0 && (
               <div className={s.rowBetween} style={{ marginTop: 8 }}>
                 <div className={s.bannerLabel}>On credit — to collect</div>
