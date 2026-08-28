@@ -26,11 +26,13 @@ export async function GET() {
          (SELECT COUNT(*) FROM purchase_payments)                              AS pp,
          (SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM bills)      AS bt,
          (SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM expenses)   AS et,
-         (SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM purchases)  AS pt`,
+         (SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM purchases)  AS pt,
+         (SELECT COUNT(*) FROM price_items)                                    AS pr,
+         (SELECT COALESCE(MAX(UNIX_TIMESTAMP(updated_at)), 0) FROM price_items) AS prt`,
     );
     const r = (rows as Record<string, number>[])[0];
     return NextResponse.json({
-      v: `${r.b}.${r.e}.${r.p}.${r.bp}.${r.pp}.${r.bt}.${r.et}.${r.pt}`,
+      v: `${r.b}.${r.e}.${r.p}.${r.bp}.${r.pp}.${r.bt}.${r.et}.${r.pt}.${r.pr}.${r.prt}`,
     });
   } catch (err) {
     console.error("GET /api/data/version", err);

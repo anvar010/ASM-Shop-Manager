@@ -6,6 +6,7 @@ import OverviewTab from "./OverviewTab";
 import BillsTab from "./BillsTab";
 import ExpensesTab from "./ExpensesTab";
 import StockTab from "./StockTab";
+import CalculatorTab from "./CalculatorTab";
 
 export default function ShopApp() {
   const shop = useShopContext();
@@ -21,6 +22,7 @@ export default function ShopApp() {
       {current.id === "overview" && <OverviewTab shop={shop} />}
       {current.id === "expenses" && <ExpensesTab shop={shop} />}
       {current.id === "stock" && <StockTab shop={shop} />}
+      {current.id === "calculator" && <CalculatorTab shop={shop} />}
     </AppShell>
   );
 }

@@ -9,7 +9,15 @@ import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
 import NotificationToggle, { NotificationBell } from "./NotificationToggle";
-import { IconBill, IconBox, IconChevron, IconNote, IconTrend, IconUsers } from "./Icons";
+import {
+  IconBill,
+  IconBox,
+  IconCalculator,
+  IconChevron,
+  IconNote,
+  IconTrend,
+  IconUsers,
+} from "./Icons";
 
 type Tab = {
   id: TabId;
@@ -22,6 +30,9 @@ type Tab = {
   staffOnly?: boolean;
   /** A tab that opens its own route rather than switching panel. */
   href?: string;
+  /* Hidden below tablet width. The calculator wants a keypad and a price list
+     side by side, which a phone cannot give it. */
+  tabletOnly?: boolean;
 };
 
 export const TABS: Tab[] = [
@@ -30,6 +41,7 @@ export const TABS: Tab[] = [
   { id: "credits", label: "Credits", title: "Credit Customers", Icon: IconUsers, staffOnly: true, href: "/credits" },
   { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote, adminOnly: true },
   { id: "stock", label: "Stock", title: "Stock Purchases", Icon: IconBox },
+  { id: "calculator", label: "Calculator", title: "Calculator", Icon: IconCalculator, tabletOnly: true },
 ];
 
 /** Staff keep to takings, credit and stock; the rest is the owner's business. */
@@ -190,7 +202,9 @@ export default function AppShell({
             <button
               key={id}
               type="button"
-              className={`${styles.navItem} ${active ? styles.navItemActive : ""}`}
+              className={`${styles.navItem} ${active ? styles.navItemActive : ""} ${
+                tab.tabletOnly ? styles.navTabletOnly : ""
+              }`}
               onClick={() => openTab(tab)}
               aria-current={active ? "page" : undefined}
             >

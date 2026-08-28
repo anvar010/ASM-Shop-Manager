@@ -19,6 +19,7 @@ import type {
   PaymentModeId,
   PeriodId,
   Expense,
+  PriceItem,
   Purchase,
   PurchaseRangeId,
   TabId,
@@ -84,6 +85,11 @@ export function useShop(signedIn: boolean) {
   const [expenseDate, setExpenseDate] = useState(todayKey);
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [prices, setPrices] = useState<PriceItem[]>([]);
+  const [priceSearch, setPriceSearch] = useState("");
+  const [priceName, setPriceName] = useState("");
+  const [priceAmount, setPriceAmount] = useState("");
+  const [priceUnit, setPriceUnit] = useState("");
   const [purchaseSearch, setPurchaseSearch] = useState("");
   const [purchaseDueOnly, setPurchaseDueOnly] = useState(false);
   /* The all-bills page filters independently of the Stock tab, so switching
@@ -126,6 +132,7 @@ export function useShop(signedIn: boolean) {
     setBills(data.bills);
     setExpenses(data.expenses);
     setPurchases(data.purchases);
+    setPrices(data.prices ?? []);
     return true;
   }, []);
 
@@ -558,6 +565,14 @@ export function useShop(signedIn: boolean) {
         .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
     [bills],
   );
+
+  /** The price list, filtered by what has been typed, cheapest name first. */
+  const priceRows = useMemo(() => {
+    const q = priceSearch.trim().toLowerCase();
+    return prices
+      .filter((p) => q === "" || p.name.toLowerCase().includes(q))
+      .map((p) => ({ ...p, priceLabel: formatINR(p.price) }));
+  }, [prices, priceSearch]);
 
   /** Days that carry a sale, for the report calendar's markers. */
   const billDates = useMemo(() => new Set(bills.map((b) => b.date)), [bills]);
@@ -1269,6 +1284,33 @@ export function useShop(signedIn: boolean) {
     [purchases, today],
   );
 
+  /** Adds an item, or corrects the price of one already listed. */
+  const savePrice = useCallback(() => {
+    const name = priceName.trim();
+    const amount = parseFloat(priceAmount);
+    if (!name || Number.isNaN(amount) || amount < 0) return;
+    const existing = prices.find((p) => p.name.toLowerCase() === name.toLowerCase());
+    const item: PriceItem = {
+      // Reusing the id keeps a correction an update rather than a second row.
+      id: existing?.id ?? newId("pi"),
+      name: existing?.name ?? name,
+      price: amount,
+      unit: priceUnit.trim() || null,
+    };
+    setPrices((prev) =>
+      existing ? prev.map((p) => (p.id === item.id ? item : p)) : [...prev, item],
+    );
+    api.savePrice(item);
+    setPriceName("");
+    setPriceAmount("");
+    setPriceUnit("");
+  }, [prices, priceName, priceAmount, priceUnit]);
+
+  const deletePrice = useCallback((id: string) => {
+    setPrices((prev) => prev.filter((p) => p.id !== id));
+    api.deletePrice(id);
+  }, []);
+
   const goAddBill = useCallback(() => {
     setActiveTab("bills");
     setSelectedDate(today);
@@ -1378,6 +1420,19 @@ export function useShop(signedIn: boolean) {
     resetExpenseForm,
     deleteExpense,
     editExpense,
+
+    // price list
+    priceRows,
+    priceSearch,
+    setPriceSearch,
+    priceName,
+    setPriceName,
+    priceAmount,
+    setPriceAmount,
+    priceUnit,
+    setPriceUnit,
+    savePrice,
+    deletePrice,
 
     // stock purchases
     purchaseRows,

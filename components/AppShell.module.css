@@ -134,6 +134,17 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* Offered only where there is room for a keypad beside a list. */
+.navTabletOnly {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .navTabletOnly {
+    display: flex;
+  }
+}
+
 .navItem {
   flex: 1;
   display: flex;

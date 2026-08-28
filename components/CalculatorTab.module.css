@@ -1,0 +1,215 @@
+/*
+ * Two columns from tablet up, which is the only place this tab is offered.
+ * The narrow rule exists so a rotated tablet still reads sensibly.
+ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 380px minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+/* ---------------- Calculator ---------------- */
+
+.calcCard {
+  display: flex;
+  flex-direction: column;
+}
+
+/* A running record of what was added, so a mis-key is visible after the fact. */
+.tape {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  height: 76px;
+  overflow-y: auto;
+  padding: 2px 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tapeLine {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.tapeEmpty {
+  margin: auto 0;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-align: right;
+  line-height: 1.4;
+}
+
+.display {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 4px 16px;
+}
+
+.displayOp {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.displayValue {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--text);
+  word-break: break-all;
+}
+
+.keys {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.key {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  transition: background 0.12s ease;
+}
+
+.key:hover {
+  background: var(--border);
+}
+
+.key:active {
+  background: var(--primary-light);
+}
+
+.keyWide {
+  grid-column: span 2;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.keyOp {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.keyEquals {
+  grid-column: span 4;
+  background: var(--primary);
+  color: #fff;
+}
+
+.keyEquals:hover {
+  background: var(--primary-dark);
+}
+
+/* ---------------- Price list ---------------- */
+
+.priceCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.addGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 90px;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  /* 16px keeps iOS Safari from zooming (and cropping) the page on focus. */
+  font-size: 16px;
+  color: var(--text);
+}
+
+.priceList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+@media (min-width: 1280px) {
+  .priceList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+/* The whole row is the button, so a price is one tap from the calculator. */
+.priceMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.priceMain:hover {
+  background: var(--primary-light);
+}
+
+.priceName {
+  max-width: 100%;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.priceValue {
+  font-size: 14px;
+  color: var(--primary-dark);
+}
+
+.priceUnit {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}

@@ -154,6 +154,15 @@ export function IconBellOff({ size = 20, color = "currentColor", style }: IconPr
   );
 }
 
+export function IconCalculator({ size = 22, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} aria-hidden="true">
+      <rect x="4" y="3" width="16" height="18" rx="2.5" />
+      <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
+    </svg>
+  );
+}
+
 export function IconCalendar({ size = 16, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">

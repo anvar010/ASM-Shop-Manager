@@ -8,7 +8,7 @@ export type ExpenseCategoryId =
   | "transport"
   | "other";
 
-export type TabId = "bills" | "overview" | "credits" | "expenses" | "stock";
+export type TabId = "bills" | "overview" | "credits" | "expenses" | "stock" | "calculator";
 export type PeriodId = "today" | "week" | "month";
 export type PurchaseRangeId = "all" | "today" | "week" | "month" | "custom";
 
@@ -97,4 +97,13 @@ export interface PeriodStats {
   compare: string;
   up: boolean;
   has: boolean;
+}
+
+/** What the shop charges for an item, looked up at the counter. */
+export interface PriceItem {
+  id: string;
+  name: string;
+  price: number;
+  /** What the price is per: "kg", "pkt", "btl". Optional. */
+  unit?: string | null;
 }

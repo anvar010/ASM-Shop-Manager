@@ -1,6 +1,6 @@
 "use client";
 
-import type { Bill, Expense, Purchase } from "./types";
+import type { Bill, Expense, PriceItem, Purchase } from "./types";
 
 /*
  * Every mutation is applied to local state first and sent here afterwards, so
@@ -64,6 +64,7 @@ export async function loadLedger(): Promise<{
   bills: Bill[];
   expenses: Expense[];
   purchases: Purchase[];
+  prices: PriceItem[];
 } | null> {
   try {
     const res = await fetch("/api/data", { cache: "no-store" });
@@ -112,4 +113,8 @@ export const api = {
     send(`/api/purchases?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
   payPurchase: (p: { id: string; purchaseId: string; date: string; amount: number }) =>
     send("/api/purchases/pay", json(p), "the payment"),
+
+  savePrice: (item: PriceItem) => send("/api/prices", json(item), "the price"),
+  deletePrice: (id: string) =>
+    send(`/api/prices?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the removal"),
 };
