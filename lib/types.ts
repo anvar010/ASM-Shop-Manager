@@ -103,7 +103,9 @@ export interface PeriodStats {
 export interface PriceItem {
   id: string;
   name: string;
+  /** Free text, so a shop can name its own aisles. */
+  category?: string | null;
   price: number;
-  /** What the price is per: "kg", "pkt", "btl". Optional. */
+  /** What the price is per: "kg", "litre", "piece". Optional. */
   unit?: string | null;
 }

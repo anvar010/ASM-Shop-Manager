@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Shop } from "@/lib/useShop";
 import { formatINR, groupIN } from "@/lib/format";
-import s from "./shared.module.css";
+import Link from "next/link";
+import s2 from "./shared.module.css";
 import c from "./CalculatorTab.module.css";
 import { IconBackspace, IconPlus, IconSearch, IconTrash } from "./Icons";
 
@@ -105,7 +106,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
   return (
     <div className={c.layout}>
       {/* ---------------- Calculator ---------------- */}
-      <section className={`${s.card} ${c.calcCard}`}>
+      <section className={`${s2.card} ${c.calcCard}`}>
         <div className={c.tape}>
           {tape.length === 0 ? (
             <span className={c.tapeEmpty}>Add up a basket, or tap a price to bring it over</span>
@@ -159,48 +160,15 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
 
       {/* ---------------- Price list ---------------- */}
       <div className={c.priceCol}>
-        <section className={s.card}>
-          <div className={s.cardTitle} style={{ marginBottom: 12 }}>
-            Add an item price
-          </div>
-          <div className={c.addGrid}>
-            <input
-              className={s.input}
-              type="text"
-              placeholder="Item name"
-              value={shop.priceName}
-              onChange={(e) => shop.setPriceName(e.target.value)}
-              aria-label="Item name"
-            />
-            <input
-              className={`num ${s.input}`}
-              type="number"
-              inputMode="decimal"
-              min="0"
-              placeholder="0"
-              value={shop.priceAmount}
-              onChange={(e) => shop.setPriceAmount(e.target.value)}
-              aria-label="Price"
-            />
-            <input
-              className={s.input}
-              type="text"
-              placeholder="kg"
-              value={shop.priceUnit}
-              onChange={(e) => shop.setPriceUnit(e.target.value)}
-              aria-label="Unit"
-            />
-          </div>
-          <button type="button" className={s.primaryButton} onClick={shop.savePrice}>
-            <IconPlus size={16} color="#fff" />
-            Add Price
-          </button>
-        </section>
+        <Link href="/prices/new" className={c.addButton}>
+          <IconPlus size={18} color="currentColor" />
+          Add data
+        </Link>
 
-        <section className={s.card}>
-          <div className={s.rowBetween} style={{ marginBottom: 12 }}>
-            <div className={s.cardTitle}>Prices</div>
-            <div className={s.muted}>
+        <section className={s2.card}>
+          <div className={s2.rowBetween} style={{ marginBottom: 12 }}>
+            <div className={s2.cardTitle}>Prices</div>
+            <div className={s2.muted}>
               {shop.priceRows.length} {shop.priceRows.length === 1 ? "item" : "items"}
             </div>
           </div>
@@ -218,43 +186,53 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
           </div>
 
           {shop.priceRows.length > 0 ? (
-            <div className={c.priceList}>
-              {shop.priceRows.map((p) => (
-                <div key={p.id} className={c.priceRow}>
-                  <button
-                    type="button"
-                    className={c.priceMain}
-                    onClick={() => useAmount(p.price)}
-                    title="Bring this price into the calculator"
-                  >
-                    <span className={`${s.truncate} ${c.priceName}`}>{p.name}</span>
-                    <span className={`num ${c.priceValue}`}>
-                      {p.priceLabel}
-                      {p.unit ? <span className={c.priceUnit}> /{p.unit}</span> : null}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className={s.rowAction}
-                    onClick={() => shop.deletePrice(p.id)}
-                    aria-label={`Remove ${p.name}`}
-                  >
-                    <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
-                      <IconTrash size={13} color="var(--danger)" />
-                    </span>
-                  </button>
+            <div className={c.groups}>
+              {shop.priceGroups.map((g) => (
+                <div key={g.category}>
+                  <div className={c.groupHead}>
+                    {g.category}
+                    <span className={c.groupCount}>{g.items.length}</span>
+                  </div>
+                  <div className={c.priceList}>
+                    {g.items.map((p) => (
+                      <div key={p.id} className={c.priceRow}>
+                        <button
+                          type="button"
+                          className={c.priceMain}
+                          onClick={() => useAmount(p.price)}
+                          title="Bring this price into the calculator"
+                        >
+                          <span className={`${s2.truncate} ${c.priceName}`}>{p.name}</span>
+                          <span className={`num ${c.priceValue}`}>
+                            {p.priceLabel}
+                            {p.unit ? <span className={c.priceUnit}> /{p.unit}</span> : null}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={s2.rowAction}
+                          onClick={() => shop.deletePrice(p.id)}
+                          aria-label={`Remove ${p.name}`}
+                        >
+                          <span className={`${s2.rowActionInner} ${s2.rowActionDanger}`}>
+                            <IconTrash size={13} color="var(--danger)" />
+                          </span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className={s.empty}>
-              <div className={s.emptyTitle}>
+            <div className={s2.empty}>
+              <div className={s2.emptyTitle}>
                 {shop.priceSearch ? "Nothing matches" : "No prices yet"}
               </div>
               <div style={{ fontSize: 12 }}>
                 {shop.priceSearch
                   ? "Try a shorter search."
-                  : "Add what you charge, and it can be looked up here."}
+                  : "Use Add data to record what you charge."}
               </div>
             </div>
           )}

@@ -18,9 +18,11 @@ export async function POST(request: Request) {
     /* Adding a name that already exists updates its price rather than
        refusing: re-entering an item is how a price gets corrected. */
     await db().execute(
-      `INSERT INTO price_items (id, name, price, unit) VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE price = VALUES(price), unit = VALUES(unit)`,
-      [item.id, name, item.price, item.unit?.trim() || null],
+      `INSERT INTO price_items (id, name, category, price, unit) VALUES (?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE category = VALUES(category),
+                               price    = VALUES(price),
+                               unit     = VALUES(unit)`,
+      [item.id, name, item.category?.trim() || null, item.price, item.unit?.trim() || null],
     );
     return NextResponse.json({ ok: true });
   } catch (e) {

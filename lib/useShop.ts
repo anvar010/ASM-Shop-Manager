@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CATEGORIES, categoryMeta, expenseMeta, modeMeta, PAYMENT_MODES } from "./constants";
+import {
+  CATEGORIES,
+  categoryMeta,
+  DEFAULT_PRICE_CATEGORIES,
+  expenseMeta,
+  modeMeta,
+  PAYMENT_MODES,
+} from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
 import { buildDay, buildPeriod, PERIOD_META } from "./periods";
 import {
@@ -89,7 +96,8 @@ export function useShop(signedIn: boolean) {
   const [priceSearch, setPriceSearch] = useState("");
   const [priceName, setPriceName] = useState("");
   const [priceAmount, setPriceAmount] = useState("");
-  const [priceUnit, setPriceUnit] = useState("");
+  const [priceUnit, setPriceUnit] = useState("kg");
+  const [priceCategory, setPriceCategory] = useState("");
   const [purchaseSearch, setPurchaseSearch] = useState("");
   const [purchaseDueOnly, setPurchaseDueOnly] = useState(false);
   /* The all-bills page filters independently of the Stock tab, so switching
@@ -566,13 +574,39 @@ export function useShop(signedIn: boolean) {
     [bills],
   );
 
-  /** The price list, filtered by what has been typed, cheapest name first. */
+  /** The price list, filtered by what has been typed. */
   const priceRows = useMemo(() => {
     const q = priceSearch.trim().toLowerCase();
     return prices
-      .filter((p) => q === "" || p.name.toLowerCase().includes(q))
+      .filter(
+        (p) =>
+          q === "" ||
+          p.name.toLowerCase().includes(q) ||
+          (p.category ?? "").toLowerCase().includes(q),
+      )
       .map((p) => ({ ...p, priceLabel: formatINR(p.price) }));
   }, [prices, priceSearch]);
+
+  /** The same list under its category headings, for browsing rather than searching. */
+  const priceGroups = useMemo(() => {
+    const byCat = new Map<string, typeof priceRows>();
+    priceRows.forEach((p) => {
+      const key = p.category?.trim() || "Uncategorised";
+      byCat.set(key, [...(byCat.get(key) ?? []), p]);
+    });
+    return [...byCat.entries()]
+      .sort((a, b) => (a[0] === "Uncategorised" ? 1 : b[0] === "Uncategorised" ? -1 : a[0].localeCompare(b[0])))
+      .map(([category, items]) => ({ category, items }));
+  }, [priceRows]);
+
+  /* The starting categories plus anything the shop has typed since, so a new
+     one becomes an option the moment it is used. */
+  const priceCategories = useMemo(() => {
+    const used = prices.map((p) => p.category?.trim()).filter(Boolean) as string[];
+    return [...new Set([...DEFAULT_PRICE_CATEGORIES, ...used])].sort((a, b) =>
+      a.localeCompare(b),
+    );
+  }, [prices]);
 
   /** Days that carry a sale, for the report calendar's markers. */
   const billDates = useMemo(() => new Set(bills.map((b) => b.date)), [bills]);
@@ -1285,15 +1319,16 @@ export function useShop(signedIn: boolean) {
   );
 
   /** Adds an item, or corrects the price of one already listed. */
-  const savePrice = useCallback(() => {
+  const savePrice = useCallback((): boolean => {
     const name = priceName.trim();
     const amount = parseFloat(priceAmount);
-    if (!name || Number.isNaN(amount) || amount < 0) return;
+    if (!name || Number.isNaN(amount) || amount < 0) return false;
     const existing = prices.find((p) => p.name.toLowerCase() === name.toLowerCase());
     const item: PriceItem = {
       // Reusing the id keeps a correction an update rather than a second row.
       id: existing?.id ?? newId("pi"),
       name: existing?.name ?? name,
+      category: priceCategory.trim() || null,
       price: amount,
       unit: priceUnit.trim() || null,
     };
@@ -1303,8 +1338,8 @@ export function useShop(signedIn: boolean) {
     api.savePrice(item);
     setPriceName("");
     setPriceAmount("");
-    setPriceUnit("");
-  }, [prices, priceName, priceAmount, priceUnit]);
+    return true;
+  }, [prices, priceName, priceAmount, priceUnit, priceCategory]);
 
   const deletePrice = useCallback((id: string) => {
     setPrices((prev) => prev.filter((p) => p.id !== id));
@@ -1423,6 +1458,10 @@ export function useShop(signedIn: boolean) {
 
     // price list
     priceRows,
+    priceGroups,
+    priceCategories,
+    priceCategory,
+    setPriceCategory,
     priceSearch,
     setPriceSearch,
     priceName,

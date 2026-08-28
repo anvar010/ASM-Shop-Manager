@@ -25,7 +25,7 @@ export async function GET() {
         : [[]];
     const [purchaseRows] = await pool.query("SELECT * FROM purchases ORDER BY bought_on DESC");
     const [priceRows] = await pool.query(
-      "SELECT id, name, price, unit FROM price_items ORDER BY name",
+      "SELECT id, name, category, price, unit FROM price_items ORDER BY category, name",
     );
     const [purchasePays] = await pool.query(
       "SELECT id, purchase_id AS parent_id, paid_on, amount FROM purchase_payments ORDER BY paid_on",
