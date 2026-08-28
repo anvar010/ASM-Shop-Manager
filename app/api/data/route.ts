@@ -25,7 +25,10 @@ export async function GET() {
         : [[]];
     const [purchaseRows] = await pool.query("SELECT * FROM purchases ORDER BY bought_on DESC");
     const [priceRows] = await pool.query(
-      "SELECT id, name, category, price, unit FROM price_items ORDER BY category, name",
+      "SELECT id, name, category, price, per_qty AS perQty, unit FROM price_items ORDER BY category, name",
+    );
+    const [categoryRows] = await pool.query(
+      "SELECT name FROM price_categories ORDER BY name",
     );
     const [purchasePays] = await pool.query(
       "SELECT id, purchase_id AS parent_id, paid_on, amount FROM purchase_payments ORDER BY paid_on",
@@ -38,6 +41,7 @@ export async function GET() {
       expenses: (expenseRows as any[]).map(toExpense),
       purchases: (purchaseRows as any[]).map((r) => toPurchase(r, by(purchasePays as any[], r.id))),
       prices: priceRows,
+      categories: (categoryRows as { name: string }[]).map((r) => r.name),
     });
   } catch (e) {
     console.error("GET /api/data", e);

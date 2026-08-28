@@ -1,10 +1,74 @@
-.wrap {
-  max-width: 560px;
+/*
+ * One column on a phone, two once there is width — the form on the left and
+ * what it will become on the right, so the page fills its space instead of a
+ * narrow card floating in it.
+ */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  max-width: 1040px;
   margin: 0 auto;
 }
 
+@media (min-width: 860px) {
+  .layout {
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+}
+
+.formCol,
+.sideCol {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* ---------------- Steps ---------------- */
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.stepNo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stepLabel {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stepHint {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.nameInput {
+  font-size: 16px;
+}
+
 .note {
-  margin-top: 8px;
+  margin-top: 9px;
   padding: 9px 11px;
   border-radius: var(--radius-sm);
   background: var(--warning-bg);
@@ -14,8 +78,37 @@
   line-height: 1.45;
 }
 
+/* ---------------- Chips ---------------- */
+
+.chipWrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .chipActive {
   background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.chipActive:hover {
   color: #fff;
 }
 
@@ -23,10 +116,14 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px dashed var(--border);
-  background: transparent;
-  color: var(--text-muted);
+  border-style: dashed;
 }
+
+.categoryRow {
+  display: flex;
+  gap: 8px;
+}
+
 
 .newCategory {
   display: flex;
@@ -36,7 +133,7 @@
 
 .useButton {
   flex-shrink: 0;
-  padding: 0 16px;
+  padding: 0 18px;
   border-radius: var(--radius-md);
   background: var(--primary);
   color: #fff;
@@ -44,17 +141,76 @@
   font-weight: 700;
 }
 
-.priceRow {
-  display: flex;
+/* ---------------- Amount ---------------- */
+
+/* Large enough to be the obvious thing to fill in, since it is the number
+   the whole entry exists for. */
+/*
+ * Reads as one sentence: ₹30 for 100 g. A grid rather than flex, so the two
+ * boxes hold their proportions instead of depending on how wide a number
+ * input reports itself to be — the price is the bigger figure and was being
+ * squeezed until it clipped.
+ */
+.quoteRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 1fr);
+  align-items: stretch;
   gap: 10px;
 }
 
-.priceRow > * {
-  flex: 1;
+@media (max-width: 520px) {
+  .quoteRow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .forWord {
+    display: none;
+  }
 }
 
-.preview {
-  margin-top: 16px;
+.forWord {
+  align-self: center;
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.qtyBox {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.qtyBox:focus-within {
+  border-color: var(--primary);
+}
+
+.qtyInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+}
+
+.qtyUnit {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.summary {
+  margin-top: 14px;
   padding: 11px 13px;
   border-radius: var(--radius-md);
   background: var(--primary-light);
@@ -64,18 +220,441 @@
   line-height: 1.45;
 }
 
+.amountBox {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.amountBox:focus-within {
+  border-color: var(--primary);
+}
+
+.currency {
+  flex-shrink: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.amountInput {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+}
+
+.unitGroups {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.unitLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 7px;
+}
+
+
+
+
+
+
+
+
+/* Side by side once there is room: the two are the same decision, not a
+   primary action and a footnote. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+@media (min-width: 560px) {
+  .actions {
+    flex-direction: row;
+  }
+
+  .saveButton {
+    flex: 1.3;
+  }
+
+  .againButton {
+    flex: 1;
+  }
+}
+
+.saveButton {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 15px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.15s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+
 .againButton {
   width: 100%;
-  margin-top: 8px;
-  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 15px;
   border-radius: var(--radius-md);
+  border: 1px solid var(--primary);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.againButton:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+
+.saveButton:disabled,
+.againButton:disabled {
+  opacity: 0.45;
+}
+
+/* ---------------- Lists ---------------- */
+
+.addedList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.existingList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.existingList::-webkit-scrollbar {
+  display: none;
+}
+
+.addedRow {
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.listSearch {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.filterChip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.filterOn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.existingRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 8px 8px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.existingText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.existingName {
+  max-width: 100%;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* The price and what it covers, since one without the other says little. */
+.existingMeta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.missing {
+  margin-top: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ---------------- Editing a listed row ---------------- */
+
+.rowEditor {
+  padding: 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.rowEditorHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 9px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.rowEditor input,
+.rowSelect {
+  margin-bottom: 8px;
+}
+
+.rowSelectWrap {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.rowEditorQuote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowMini {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+}
+
+.rowMini:focus-within {
+  border-color: var(--primary);
+}
+
+.rowMiniPrefix {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.rowMiniInput {
+  flex: 1;
+  min-width: 0;
+  margin: 0 !important;
+  border: none;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+}
+
+.rowUnit {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+.rowFor {
+  flex-shrink: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.rowClash {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.rowEditorActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.rowSave {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.rowSave:disabled {
+  opacity: 0.5;
+}
+
+.rowCancel {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
   background: var(--surface-alt);
   color: var(--text-muted);
   font-size: 12.5px;
   font-weight: 700;
 }
 
-.againButton:disabled,
-.wrap button:disabled {
-  opacity: 0.5;
+/* ---------------- Categories ---------------- */
+
+.catList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.catRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.catMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.catName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.catCount {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.catEditor {
+  padding: 10px;
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.catNote {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.catEditorActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.catCancel,
+.catSave {
+  flex: 1;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.catCancel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.catSave {
+  background: var(--primary);
+  color: #fff;
+}
+
+.catSave:disabled {
+  opacity: 0.45;
 }

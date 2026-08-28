@@ -183,11 +183,11 @@ export default function AppShell({
         )}
       </main>
 
-      {/* A write that failed after the screen already changed must not pass
-          silently, or the shop is trusting a figure the database never got. */}
+      {/* Whatever went wrong says so in its own words: a failed write is not
+          the same event as a refresh that could not reach the server. */}
       {shop.saveError && (
         <div className={styles.toast} role="alert">
-          <span>{shop.saveError}. The screen has been put back to what is saved.</span>
+          <span>{shop.saveError}</span>
           <button type="button" className={styles.toastClose} onClick={shop.dismissSaveError}>
             Dismiss
           </button>

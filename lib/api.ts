@@ -42,13 +42,17 @@ async function send(path: string, init: RequestInit, what: string) {
     if (signedOut(res)) return false;
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      onError?.(body.error ?? `Could not save ${what}`);
+      onError?.(
+        `${body.error ?? `Could not save ${what}`}. The screen has been put back to what is saved.`,
+      );
       onDesync?.();
       return false;
     }
     return true;
   } catch {
-    onError?.(`Could not reach the server to save ${what}`);
+    onError?.(
+      `Could not reach the server to save ${what}. The screen has been put back to what is saved.`,
+    );
     onDesync?.();
     return false;
   }
@@ -60,22 +64,37 @@ const json = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-export async function loadLedger(): Promise<{
+/*
+ * `background` marks the refreshes that happen on their own — returning to the
+ * app, or the periodic check. Those failing costs nothing: the screen carries
+ * on showing the last good data, so it says so rather than raising an alarm
+ * about work being undone.
+ */
+export async function loadLedger(background = false): Promise<{
   bills: Bill[];
   expenses: Expense[];
   purchases: Purchase[];
   prices: PriceItem[];
+  categories: string[];
 } | null> {
   try {
     const res = await fetch("/api/data", { cache: "no-store" });
     if (signedOut(res)) return null;
     if (!res.ok) {
-      onError?.("Could not load your data");
+      onError?.(
+        background
+          ? "Could not refresh just now — still showing the data last loaded"
+          : "Could not load your data",
+      );
       return null;
     }
     return await res.json();
   } catch {
-    onError?.("Could not reach the server");
+    onError?.(
+      background
+        ? "Could not refresh just now — still showing the data last loaded"
+        : "Could not reach the server",
+    );
     return null;
   }
 }
@@ -117,4 +136,13 @@ export const api = {
   savePrice: (item: PriceItem) => send("/api/prices", json(item), "the price"),
   deletePrice: (id: string) =>
     send(`/api/prices?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the removal"),
+  addCategory: (name: string) => send("/api/prices/category", json({ name }), "the category"),
+  renameCategory: (from: string, to: string) =>
+    send("/api/prices/category", { ...json({ from, to }), method: "PATCH" }, "the category"),
+  clearCategory: (name: string) =>
+    send(
+      `/api/prices/category?name=${encodeURIComponent(name)}`,
+      { method: "DELETE" },
+      "the category",
+    ),
 };

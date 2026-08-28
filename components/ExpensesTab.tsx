@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useConfirm } from "./ConfirmDialog";
+import ExpenseRowEditor from "./ExpenseRowEditor";
 import type { Shop } from "@/lib/useShop";
 import { EXPENSE_CATEGORIES } from "@/lib/constants";
 import { formatINR } from "@/lib/format";
@@ -10,7 +12,7 @@ import CalendarFilter from "./CalendarFilter";
 import { IconCalendar, IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function ExpensesTab({ shop }: { shop: Shop }) {
-  const editing = shop.editingExpenseId !== null;
+  const { ask, dialog } = useConfirm();
   const [calOpen, setCalOpen] = useState(false);
   const calRef = useRef<HTMLDivElement | null>(null);
 
@@ -159,14 +161,9 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
             })}
           </div>
           <button type="button" className={s.darkButton} onClick={shop.saveExpense}>
-            {editing ? <IconPencil size={14} color="#fff" /> : <IconPlus size={16} color="#fff" />}
-            {editing ? "Save Changes" : "Add Expense"}
+            <IconPlus size={16} color="#fff" />
+            Add Expense
           </button>
-          {editing && (
-            <button type="button" className={c.formCancel} onClick={shop.resetExpenseForm}>
-              Cancel edit
-            </button>
-          )}
         </section>
       </div>
 
@@ -183,54 +180,64 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
         {shop.expenseRows.length > 0 ? (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {shop.expenseRows.map((e) => (
-                <div key={e.id} className={`${s.cardSm} ${c.expenseRow}`}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 999,
-                        background: e.catColor,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <div style={{ minWidth: 0 }}>
-                      <div className={s.truncate} style={{ fontSize: 13, fontWeight: 700 }}>
-                        {e.desc}
+                {shop.expenseRows.map((e) =>
+                  shop.editingExpenseId === e.id ? (
+                    <ExpenseRowEditor key={e.id} shop={shop} />
+                  ) : (
+                    <div key={e.id} className={`${s.cardSm} ${c.expenseRow}`}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 999,
+                            background: e.catColor,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div className={s.truncate} style={{ fontSize: 13, fontWeight: 700 }}>
+                            {e.desc}
+                          </div>
+                          <div style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600, marginTop: 1 }}>
+                            {e.catLabel} · {e.time}
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600, marginTop: 1 }}>
-                        {e.catLabel} · {e.time}
+                      <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                        <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
+                          −{e.amountLabel}
+                        </div>
+                        <button
+                          type="button"
+                          className={s.rowAction}
+                          onClick={() => shop.editExpense(e.id)}
+                          aria-label={`Edit ${e.desc}`}
+                        >
+                          <span className={s.rowActionInner}>
+                            <IconPencil size={13} color="var(--text-muted)" />
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          className={s.rowAction}
+                          onClick={() =>
+                            ask({
+                              title: "Delete this expense?",
+                              detail: `${e.desc} · ${e.amountLabel} · ${e.catLabel}, ${e.time}.`,
+                              onConfirm: () => shop.deleteExpense(e.id),
+                            })
+                          }
+                          aria-label={`Delete ${e.desc}`}
+                        >
+                          <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
+                            <IconTrash size={13} color="var(--danger)" />
+                          </span>
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-                    <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
-                      −{e.amountLabel}
-                    </div>
-                    <button
-                      type="button"
-                      className={s.rowAction}
-                      onClick={() => shop.editExpense(e.id)}
-                      aria-label={`Edit ${e.desc}`}
-                    >
-                      <span className={s.rowActionInner}>
-                        <IconPencil size={13} color="var(--text-muted)" />
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={s.rowAction}
-                      onClick={() => shop.deleteExpense(e.id)}
-                      aria-label={`Delete ${e.desc}`}
-                    >
-                      <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
-                        <IconTrash size={13} color="var(--danger)" />
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  ),
+                )}
             </div>
 
             <div className={c.totalRow} style={{ marginTop: 16, display: "flex", justifyContent: "space-between" }}>
@@ -251,6 +258,7 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
         )}
       </section>
     </div>
-      </div>
+        {dialog}
+    </div>
   );
 }

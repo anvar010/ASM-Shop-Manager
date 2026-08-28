@@ -107,6 +107,25 @@ export function IconMinus({ size = 16, color = "currentColor", style }: IconProp
   );
 }
 
+export function IconTimes({ size = 16, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} strokeWidth={2.25} aria-hidden="true">
+      <line x1="6.5" y1="6.5" x2="17.5" y2="17.5" />
+      <line x1="17.5" y1="6.5" x2="6.5" y2="17.5" />
+    </svg>
+  );
+}
+
+export function IconDivide({ size = 16, color = "currentColor", style }: IconProps) {
+  return (
+    <svg {...base(size, color, style)} strokeWidth={2.25} aria-hidden="true">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <circle cx="12" cy="6.75" r="1.15" fill={color} stroke="none" />
+      <circle cx="12" cy="17.25" r="1.15" fill={color} stroke="none" />
+    </svg>
+  );
+}
+
 export function IconPencil({ size = 13, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">

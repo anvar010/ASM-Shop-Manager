@@ -59,6 +59,3 @@ export function expenseMeta(id: ExpenseCategoryId | string): ExpenseCategory {
  * only a starting point — anything typed once appears in the list afterwards.
  */
 export const DEFAULT_PRICE_CATEGORIES = ["Bakery", "Groceries", "Vegetables", "Fruits"];
-
-/** How a price is measured. "Each" covers anything sold by the item. */
-export const PRICE_UNITS = ["kg", "gram", "litre", "ml", "piece", "packet", "dozen", "bunch"];

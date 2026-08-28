@@ -5,6 +5,7 @@ import type { Shop } from "@/lib/useShop";
 import { formatINR } from "@/lib/format";
 import s from "./shared.module.css";
 import l from "./LoadCard.module.css";
+import { useConfirm } from "./ConfirmDialog";
 import { IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export type LoadRow = Shop["purchaseRows"][number];
@@ -28,6 +29,7 @@ export default function LoadCard({
   const underEdit = shop.editingPurchaseId === p.id;
   const router = useRouter();
   const pathname = usePathname();
+  const { ask, dialog } = useConfirm();
 
   /* Buy-again fills the new-purchase form, which lives on the Stock tab, so
      from anywhere else it loads the form and then takes you to it. Editing
@@ -205,13 +207,24 @@ export default function LoadCard({
           <button
             type="button"
             className={`${l.iconButton} ${l.iconDanger}`}
-            onClick={() => shop.deletePurchase(p.id)}
+            onClick={() =>
+              ask({
+                title: `Delete ${p.item}?`,
+                detail: `${p.supplier} · ${p.amountLabel}, ${p.paidLabel} paid.`,
+                warning:
+                  p.paidLater > 0
+                    ? `The ${formatINR(p.paidLater)} paid in instalments against this load goes with it.`
+                    : undefined,
+                onConfirm: () => shop.deletePurchase(p.id),
+              })
+            }
             aria-label={`Delete ${p.item}`}
           >
             <IconTrash size={13} color="currentColor" />
           </button>
         </div>
       )}
+      {dialog}
     </article>
   );
 }

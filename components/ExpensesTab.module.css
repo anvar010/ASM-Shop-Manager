@@ -165,3 +165,67 @@
   font-weight: 700;
   color: var(--text-faint);
 }
+
+/* ---------------- Inline row editor ---------------- */
+
+.rowEditor {
+  padding: 13px 14px;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+}
+
+.rowEditorHead {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 11px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.rowEditorGrid {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.rowEditorChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.rowEditorActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.rowEditorSave {
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.rowEditorSave:disabled {
+  opacity: 0.5;
+}
+
+.rowEditorCancel {
+  flex-shrink: 0;
+  padding: 11px 18px;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}

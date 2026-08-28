@@ -26,18 +26,62 @@
 .tape {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-  height: 76px;
+  gap: 1px;
+  height: 104px;
   overflow-y: auto;
-  padding: 2px 4px 8px;
+  padding: 4px 2px 8px;
   border-bottom: 1px solid var(--border);
 }
 
+/* Hidden rather than styled: the working is glanced at, not scrolled. */
+.tape::-webkit-scrollbar {
+  display: none;
+}
+
 .tapeLine {
-  font-size: 12px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* An arithmetic step has no total of its own, so it lines up under the
+   number it follows instead of stretching across. */
+.tapeStep {
+  justify-content: flex-end;
   color: var(--text-faint);
+}
+
+.tapeText {
+  min-width: 0;
+}
+
+.tapeAmount {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.tapeResult {
+  margin-top: 3px;
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  border-radius: 0;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10.5px;
+}
+
+.tapeResult .tapeAmount {
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--primary-dark);
 }
 
 .tapeEmpty {
@@ -98,14 +142,17 @@
 }
 
 .keyWide {
-  grid-column: span 2;
+  grid-column: span 3;
   font-size: 14px;
   color: var(--text-muted);
 }
 
+/* The signs are glyphs, not numerals, and sit small at the digits' size. */
 .keyOp {
   background: var(--primary-light);
   color: var(--primary-dark);
+  font-size: 24px;
+  line-height: 1;
 }
 
 .keyEquals {
@@ -116,6 +163,29 @@
 
 .keyEquals:hover {
   background: var(--primary-dark);
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.filterChip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.filterOn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 
 /* ---------------- Price list ---------------- */
@@ -150,9 +220,17 @@
 .groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  max-height: 520px;
+  gap: 16px;
+  /* Tall enough to browse a shelf without scrolling every second item. */
+  max-height: min(70vh, 720px);
   overflow-y: auto;
+  /* The bar itself is noise beside two columns of small cards. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.groups::-webkit-scrollbar {
+  display: none;
 }
 
 .groupHead {
@@ -209,13 +287,171 @@
 }
 
 .priceRow {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* The one being priced spans both columns, so the panel has room. */
+/* The card only marks itself as the one being priced; the panel below the row
+   carries the working out. */
+.priceRowOpen {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+  background: var(--primary-light);
+}
+
+.priceTop {
   display: flex;
   align-items: center;
   gap: 2px;
   padding: 4px 6px 4px 4px;
+}
+
+/* ---------------- Quantity ---------------- */
+
+.qtyPanel {
+  grid-column: 1 / -1;
+  padding: 12px;
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 0 1px var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+}
+
+.qtyHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.qtyHeadName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.qtyHeadPrice {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--primary-dark);
+}
+
+.qtyRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
+}
+
+.qtyInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+}
+
+.qtyUnit {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+/* Only shown where a choice exists — grams or kilos, millilitres or litres. */
+.unitPick {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+}
+
+.unitChip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.unitChipOn {
+  background: var(--primary);
+  color: #fff;
+}
+
+.qtyQuick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.qtyChip {
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.qtyChipOn {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.qtyTotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.qtySum {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.qtyAmount {
+  font-size: 20px;
+  color: var(--primary-dark);
+}
+
+.qtyAdd {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.qtyAdd:disabled {
+  opacity: 0.5;
 }
 
 /* The whole row is the button, so a price is one tap from the calculator. */

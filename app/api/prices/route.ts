@@ -15,14 +15,34 @@ export async function POST(request: Request) {
     if (!name || !(item.price >= 0)) {
       return NextResponse.json({ error: "Name and price are required" }, { status: 400 });
     }
-    /* Adding a name that already exists updates its price rather than
-       refusing: re-entering an item is how a price gets corrected. */
+    /* Re-entering an item under its own name updates its price — that is how
+       a price gets corrected. Renaming one onto another item is different:
+       the upsert below would quietly change that other row and leave this one
+       alone, so it is refused rather than half-done. */
+    const [clash] = await db().query("SELECT id FROM price_items WHERE name = ? LIMIT 1", [name]);
+    const other = (clash as { id: string }[])[0];
+    if (other && other.id !== item.id) {
+      return NextResponse.json(
+        { error: `Another item is already called "${name}"` },
+        { status: 409 },
+      );
+    }
+
     await db().execute(
-      `INSERT INTO price_items (id, name, category, price, unit) VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO price_items (id, name, category, price, per_qty, unit)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE category = VALUES(category),
                                price    = VALUES(price),
+                               per_qty  = VALUES(per_qty),
                                unit     = VALUES(unit)`,
-      [item.id, name, item.category?.trim() || null, item.price, item.unit?.trim() || null],
+      [
+        item.id,
+        name,
+        item.category?.trim() || null,
+        item.price,
+        item.perQty > 0 ? item.perQty : 1,
+        item.unit?.trim() || null,
+      ],
     );
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -10,6 +10,7 @@ import {
   PAYMENT_MODES,
 } from "./constants";
 import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
+import { quantityLabel, ratePerBase } from "./units";
 import { buildDay, buildPeriod, PERIOD_META } from "./periods";
 import {
   api,
@@ -93,10 +94,14 @@ export function useShop(signedIn: boolean) {
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [prices, setPrices] = useState<PriceItem[]>([]);
+  /* Kept apart from the items so a heading outlives the last thing filed
+     under it — clearing the price list should not clear the shelves. */
+  const [categories, setCategories] = useState<string[]>([]);
   const [priceSearch, setPriceSearch] = useState("");
   const [priceName, setPriceName] = useState("");
   const [priceAmount, setPriceAmount] = useState("");
   const [priceUnit, setPriceUnit] = useState("kg");
+  const [pricePerQty, setPricePerQty] = useState("1");
   const [priceCategory, setPriceCategory] = useState("");
   const [purchaseSearch, setPurchaseSearch] = useState("");
   const [purchaseDueOnly, setPurchaseDueOnly] = useState(false);
@@ -141,11 +146,12 @@ export function useShop(signedIn: boolean) {
     setExpenses(data.expenses);
     setPurchases(data.purchases);
     setPrices(data.prices ?? []);
+    setCategories(data.categories ?? []);
     return true;
   }, []);
 
   /** Re-read the ledger in the background, leaving the screen up meanwhile. */
-  const refresh = useCallback(() => loadLedger().then(applyLedger), [applyLedger]);
+  const refresh = useCallback(() => loadLedger(true).then(applyLedger), [applyLedger]);
 
   /*
    * Two people work this book at once, so a screen left open goes stale. It is
@@ -227,7 +233,7 @@ export function useShop(signedIn: boolean) {
     /* A failed write leaves the screen ahead of the database. Re-reading is
        the only reliable way back: it cannot get an inverse operation wrong. */
     setDesyncHandler(() => {
-      loadLedger().then(applyLedger);
+      loadLedger(true).then(applyLedger);
     });
 
     let cancelled = false;
@@ -584,7 +590,14 @@ export function useShop(signedIn: boolean) {
           p.name.toLowerCase().includes(q) ||
           (p.category ?? "").toLowerCase().includes(q),
       )
-      .map((p) => ({ ...p, priceLabel: formatINR(p.price) }));
+      .map((p) => ({
+        ...p,
+        priceLabel: formatINR(p.price),
+        /* "₹30 / 100 g" reads as the shelf label; the rate behind it is what
+           the calculator actually multiplies. */
+        perLabel: quantityLabel(p.perQty ?? 1, p.unit),
+        rate: ratePerBase(p.price, p.perQty ?? 1, p.unit),
+      }));
   }, [prices, priceSearch]);
 
   /** The same list under its category headings, for browsing rather than searching. */
@@ -599,14 +612,39 @@ export function useShop(signedIn: boolean) {
       .map(([category, items]) => ({ category, items }));
   }, [priceRows]);
 
-  /* The starting categories plus anything the shop has typed since, so a new
-     one becomes an option the moment it is used. */
+  /* The starting categories, anything the shop has used since, and whatever is
+     selected right now — a category typed a moment ago belongs to no item yet,
+     and leaving it out meant the picker could not show what had just been
+     chosen. */
   const priceCategories = useMemo(() => {
     const used = prices.map((p) => p.category?.trim()).filter(Boolean) as string[];
-    return [...new Set([...DEFAULT_PRICE_CATEGORIES, ...used])].sort((a, b) =>
-      a.localeCompare(b),
-    );
-  }, [prices]);
+    const pending = priceCategory.trim();
+    return [
+      ...new Set([
+        ...DEFAULT_PRICE_CATEGORIES,
+        ...categories,
+        ...used,
+        ...(pending ? [pending] : []),
+      ]),
+    ].sort((a, b) => a.localeCompare(b));
+  }, [prices, categories, priceCategory]);
+
+  /* Every heading actually in use and how much sits under it. Taken from the
+     whole list rather than the filtered one: a search should not make a
+     category look emptier than it is. */
+  const categoryUse = useMemo(() => {
+    const counts = new Map<string, number>();
+    // Every saved heading, including the empty ones, so a category can still
+    // be renamed or removed once its last item is gone.
+    categories.forEach((cat) => counts.set(cat, 0));
+    prices.forEach((p) => {
+      const cat = p.category?.trim();
+      if (cat) counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    });
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [prices, categories]);
 
   /** Days that carry a sale, for the report calendar's markers. */
   const billDates = useMemo(() => new Set(bills.map((b) => b.date)), [bills]);
@@ -1330,6 +1368,7 @@ export function useShop(signedIn: boolean) {
       name: existing?.name ?? name,
       category: priceCategory.trim() || null,
       price: amount,
+      perQty: Math.max(parseFloat(pricePerQty) || 1, 0.001),
       unit: priceUnit.trim() || null,
     };
     setPrices((prev) =>
@@ -1339,11 +1378,49 @@ export function useShop(signedIn: boolean) {
     setPriceName("");
     setPriceAmount("");
     return true;
-  }, [prices, priceName, priceAmount, priceUnit, priceCategory]);
+  }, [prices, priceName, priceAmount, priceUnit, pricePerQty, priceCategory]);
+
+  /* Saves a whole item as given, so a row can be corrected where it sits
+     without borrowing the fields the add form is using. */
+  const updatePrice = useCallback((item: PriceItem) => {
+    setPrices((prev) => prev.map((p) => (p.id === item.id ? item : p)));
+    api.savePrice(item);
+  }, []);
 
   const deletePrice = useCallback((id: string) => {
     setPrices((prev) => prev.filter((p) => p.id !== id));
     api.deletePrice(id);
+  }, []);
+
+  /** Renames a heading across every item under it; onto an existing one, merges. */
+  const addCategory = useCallback((name: string) => {
+    const cat = name.trim();
+    if (!cat) return;
+    setCategories((prev) => (prev.includes(cat) ? prev : [...prev, cat]));
+    api.addCategory(cat);
+  }, []);
+
+  const renameCategory = useCallback((from: string, to: string) => {
+    const oldName = from.trim();
+    const newName = to.trim();
+    if (!oldName || !newName || oldName === newName) return;
+    setPrices((prev) =>
+      prev.map((p) => (p.category?.trim() === oldName ? { ...p, category: newName } : p)),
+    );
+    setCategories((prev) => [...new Set(prev.map((c) => (c === oldName ? newName : c)))]);
+    setPriceCategory((cur) => (cur.trim() === oldName ? newName : cur));
+    api.renameCategory(oldName, newName);
+  }, []);
+
+  /* Drops the heading, not the stock: its items stay on the list and fall
+     under Uncategorised until they are filed again. */
+  const clearCategory = useCallback((name: string) => {
+    const cat = name.trim();
+    if (!cat) return;
+    setPrices((prev) => prev.map((p) => (p.category?.trim() === cat ? { ...p, category: null } : p)));
+    setCategories((prev) => prev.filter((c) => c !== cat));
+    setPriceCategory((cur) => (cur.trim() === cat ? "" : cur));
+    api.clearCategory(cat);
   }, []);
 
   const goAddBill = useCallback(() => {
@@ -1470,8 +1547,15 @@ export function useShop(signedIn: boolean) {
     setPriceAmount,
     priceUnit,
     setPriceUnit,
+    pricePerQty,
+    setPricePerQty,
     savePrice,
+    updatePrice,
     deletePrice,
+    categoryUse,
+    addCategory,
+    renameCategory,
+    clearCategory,
 
     // stock purchases
     purchaseRows,
