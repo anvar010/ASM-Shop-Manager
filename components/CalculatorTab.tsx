@@ -2,8 +2,8 @@
 
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { Shop } from "@/lib/useShop";
-import { formatINR, groupIN } from "@/lib/format";
-import { UNITS, costOf, isUnit, unitsLike, type UnitId } from "@/lib/units";
+import { formatINR, groupIN, groupTyped } from "@/lib/format";
+import { UNITS, costOf, isCount, isUnit, unitsLike, type UnitId } from "@/lib/units";
 import Link from "next/link";
 import s2 from "./shared.module.css";
 import c from "./CalculatorTab.module.css";
@@ -116,7 +116,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
       setTape((t) => [...t.slice(-9), { text: `${groupIN(value)} ${OP_SIGN[next]}` }]);
       setAcc(running);
       setOp(next);
-      setEntry(String(running));
+      setEntry(String(Number(running.toFixed(2))));
       setFresh(true);
     },
     [acc, op, value],
@@ -130,7 +130,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
       { text: `${groupIN(value)} =` },
       { text: "Total", amount: groupIN(result), kind: "result" },
     ]);
-    setEntry(String(result));
+    setEntry(String(Number(result.toFixed(2))));
     setAcc(null);
     setOp(null);
     setFresh(true);
@@ -237,7 +237,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
             type="number"
             inputMode="decimal"
             min="0"
-            step="0.01"
+            step={isCount(chosen) ? "1" : "0.01"}
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             aria-label="How much"
@@ -263,8 +263,10 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
           )}
         </div>
 
+        {/* Eggs do not come in quarters. Fractions are offered for anything
+            weighed or measured, and withheld from anything counted. */}
         <div className={c.qtyQuick}>
-          {["0.25", "0.5", "1", "2", "5", "10"].map((q) => (
+          {(isCount(chosen) ? ["1", "2", "5", "10", "12", "30"] : ["0.25", "0.5", "1", "2", "5", "10"]).map((q) => (
             <button
               key={q}
               type="button"
@@ -323,7 +325,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
 
         <div className={c.display}>
           <span className={c.displayOp}>{op ? OP_SIGN[op] : ""}</span>
-          <span className={`num ${c.displayValue}`}>{groupIN(value)}</span>
+          <span className={`num ${c.displayValue}`}>{groupTyped(entry)}</span>
         </div>
 
         <div className={c.keys}>

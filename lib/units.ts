@@ -35,6 +35,11 @@ export const UNIT_GROUPS: { label: string; units: UnitId[] }[] = [
   { label: "By count", units: ["piece", "packet"] },
 ];
 
+/** Things sold one at a time, which cannot sensibly be split. */
+export function isCount(unit: string | null | undefined): boolean {
+  return isUnit(unit) && (UNITS[unit].family === "piece" || UNITS[unit].family === "packet");
+}
+
 export function isUnit(value: string | null | undefined): value is UnitId {
   return !!value && value in UNITS;
 }

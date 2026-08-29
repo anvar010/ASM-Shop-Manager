@@ -33,13 +33,40 @@ export const MONTHS_SHORT = [
 ];
 
 /** Indian digit grouping: 1234567 -> "12,34,567" */
-export function groupIN(value: number): string {
-  const rounded = Math.round(Math.abs(value));
-  const s = String(rounded);
+/** Lakh-and-crore grouping for a whole number of rupees: 12,34,567. */
+function groupWhole(rupees: number): string {
+  const s = String(rupees);
   if (s.length <= 3) return s;
   const last3 = s.slice(-3);
   const rest = s.slice(0, -3);
   return rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",") + "," + last3;
+}
+
+/*
+ * Money is kept to the paisa. This used to round to whole rupees, which
+ * turned a quarter of a ₹10 item into ₹3 — the shop would be overcharging by
+ * the width of the rounding on every fractional quantity.
+ *
+ * Paise are shown only when there are any, so ordinary takings still read as
+ * ₹1,478 rather than ₹1,478.00.
+ */
+export function groupIN(value: number): string {
+  const paise = Math.round(Math.abs(value) * 100);
+  const rupees = Math.floor(paise / 100);
+  const rest = paise % 100;
+  const whole = groupWhole(rupees);
+  return rest === 0 ? whole : `${whole}.${String(rest).padStart(2, "0")}`;
+}
+
+/**
+ * A number as it is being typed, grouped but otherwise left alone — a
+ * half-typed "2." keeps its point, and "0.5" is not helpfully turned into
+ * "0.50" under the user's fingers.
+ */
+export function groupTyped(entry: string): string {
+  const [intPart, ...rest] = entry.split(".");
+  const grouped = groupWhole(Math.abs(parseInt(intPart, 10) || 0));
+  return rest.length > 0 ? `${grouped}.${rest.join("")}` : grouped;
 }
 
 export function formatINR(value: number): string {
