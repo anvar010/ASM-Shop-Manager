@@ -107,6 +107,24 @@ export function formatLongDate(d: Date): string {
 }
 
 /** "9:14 AM" */
+/**
+ * A displayed time as minutes since midnight, for ordering. The stored form is
+ * "10:46 PM", which sorts wrongly as text — "10:46 PM" lands before "9:05 AM".
+ * Anything unparseable sorts last rather than jumping to the front.
+ */
+export function minutesOfDay(time: string | undefined): number {
+  const m = /^(\d{1,2}):(\d{2})\s*(AM|PM)$/i.exec((time ?? "").trim());
+  if (!m) return Number.MAX_SAFE_INTEGER;
+  const h = parseInt(m[1], 10) % 12;
+  return (h + (m[3].toUpperCase() === "PM" ? 12 : 0)) * 60 + parseInt(m[2], 10);
+}
+
+/** A date key as the shop writes dates: 2026-08-30 becomes 30-08-2026. */
+export function formatDMY(key: string): string {
+  const [y, m, d] = key.split("-");
+  return y && m && d ? `${d}-${m}-${y}` : key;
+}
+
 export function formatTime(d: Date): string {
   const hours = d.getHours();
   const mins = d.getMinutes();

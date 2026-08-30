@@ -5,7 +5,7 @@ import { useConfirm } from "./ConfirmDialog";
 import BillRowEditor from "./BillRowEditor";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
-import { formatINR, groupIN } from "@/lib/format";
+import { formatDMY, formatINR, groupIN } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./BillsTab.module.css";
 import { IconBackspace, IconBill, IconPencil, IconPlus, IconTrash } from "./Icons";
@@ -16,10 +16,43 @@ export default function BillsTab({ shop }: { shop: Shop }) {
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
 
+  /* The same keypad and name field serve two jobs: writing a sale, and taking
+     money back against one already given on credit. */
+  const receiving = shop.formKind === "received";
+  const typedAmount = parseFloat(shop.formAmount) || 0;
+  const target = shop.receiveTarget;
+  const owed = target?.owed ?? 0;
+  const applied = Math.min(typedAmount, owed);
+  const overpaid = typedAmount > owed && owed > 0;
+  const canReceive = applied > 0;
+
+  /* Between midnight and the 3 AM rollover the shop is still on last night's
+     day. Saying so beats a totals screen that looks mysteriously empty. */
+  const pastMidnight = shop.calendarToday !== shop.today;
+  const filingUnder = shop.formDate || shop.today;
+  const movedOn = filingUnder !== shop.today;
+
   const form = (
     <section className={s.card}>
-      <div className={s.cardTitle} style={{ marginBottom: 14 }}>
-        Add a bill
+      <div className={s.cardTitle} style={{ marginBottom: 12 }}>
+        {receiving ? "Money received" : "Add a bill"}
+      </div>
+
+      <div className={c.kindSwitch}>
+        {([
+          { id: "sale", label: "New sale" },
+          { id: "received", label: "Received" },
+        ] as const).map((k) => (
+          <button
+            key={k.id}
+            type="button"
+            className={`${c.kindButton} ${shop.formKind === k.id ? c.kindOn : ""}`}
+            onClick={() => shop.setFormKind(k.id)}
+            aria-pressed={shop.formKind === k.id}
+          >
+            {k.label}
+          </button>
+        ))}
       </div>
 
       <div className={c.formGrid}>
@@ -68,6 +101,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         </div>
 
         <div className={c.formFields}>
+          {!receiving && (
           <input
             className={s.input}
             type="text"
@@ -77,7 +111,9 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             style={{ marginBottom: 12 }}
             aria-label="Description"
           />
+          )}
 
+          {!receiving && (
           <div className={c.catChips}>
             {CATEGORIES.map((cat) => {
               const active = shop.formCategory === cat.id;
@@ -96,8 +132,10 @@ export default function BillsTab({ shop }: { shop: Shop }) {
               );
             })}
           </div>
+          )}
 
-          <div className={s.fieldLabel}>Paid by</div>
+          {!receiving && <div className={s.fieldLabel}>Paid by</div>}
+          {!receiving && (
           <div className={c.modeGrid}>
             {PAYMENT_MODES.map((m) => {
               const active = shop.formMode === m.id;
@@ -115,9 +153,11 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             })}
           </div>
 
+          )}
+
           {/* Typing looks up people who already have a tab, so a repeat credit
               sale joins their existing one instead of starting a second. */}
-          {shop.formMode === "credit" && (
+          {!receiving && shop.formMode === "credit" && (
             <div style={{ marginBottom: 14 }}>
               <div className={c.lookup}>
                 <input
@@ -168,7 +208,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 className={s.input}
                 type="date"
                 value={shop.formDate}
-                max={shop.dayChips[0].key}
+                max={shop.calendarToday}
                 onChange={(e) => shop.setFormDate(e.target.value || shop.dayChips[0].key)}
                 aria-label="Date the credit was taken"
               />
@@ -191,10 +231,141 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           )}
 
-          <button type="button" className={s.primaryButton} onClick={shop.saveBill}>
-            <IconPlus size={16} color="#fff" />
-            Add Bill
-          </button>
+          {pastMidnight && (
+            <div className={c.nightNote}>
+              <span>
+                {movedOn ? (
+                  <>
+                    Filing under <strong>{formatDMY(filingUnder)}</strong> — it will appear on that
+                    day&apos;s list, not this one.
+                  </>
+                ) : (
+                  <>
+                    Filing under <strong>{formatDMY(shop.today)}</strong> — last night&apos;s
+                    takings.
+                  </>
+                )}
+              </span>
+              <button
+                type="button"
+                className={c.nightSwitch}
+                onClick={() => shop.setFormDate(movedOn ? shop.today : shop.calendarToday)}
+              >
+                {movedOn
+                  ? `Put back to ${formatDMY(shop.today)}`
+                  : `Move to ${formatDMY(shop.calendarToday)}`}
+              </button>
+            </div>
+          )}
+
+          {receiving && (
+            <div style={{ marginBottom: 14 }}>
+              <div className={s.fieldLabel}>Received from</div>
+              <div className={c.lookup}>
+                <input
+                  className={s.input}
+                  type="text"
+                  placeholder="Who is paying back?"
+                  value={shop.formCustomer}
+                  onChange={(e) => {
+                    shop.setFormCustomer(e.target.value);
+                    setCustomerOpen(true);
+                  }}
+                  onFocus={() => setCustomerOpen(true)}
+                  onBlur={() => setCustomerOpen(false)}
+                  onKeyDown={(e) => e.key === "Escape" && setCustomerOpen(false)}
+                  aria-label="Who the money came from"
+                  autoComplete="off"
+                />
+
+                {/* Only people with something outstanding: money cannot be
+                    taken back from a tab that is already clear. */}
+                {customerOpen && shop.owingMatches.length > 0 && (
+                  <div className={c.lookupList} role="listbox">
+                    {shop.owingMatches.map((m) => (
+                      <button
+                        key={m.customer}
+                        type="button"
+                        className={c.lookupItem}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          shop.setFormCustomer(m.customer);
+                          setCustomerOpen(false);
+                        }}
+                      >
+                        <span className={`${s.truncate} ${c.lookupName}`}>{m.customer}</span>
+                        <span className={c.lookupMeta}>{m.owedLabel} owing</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className={s.fieldLabel} style={{ marginTop: 12 }}>
+                Date received
+              </div>
+              <input
+                className={s.input}
+                type="date"
+                value={shop.formDate}
+                max={shop.calendarToday}
+                onChange={(e) => shop.setFormDate(e.target.value || shop.dayChips[0].key)}
+                aria-label="Date the money was received"
+              />
+
+              {target ? (
+                <div className={c.receiveNote}>
+                  <div className={s.rowBetween}>
+                    <span>
+                      <strong>{target.customer}</strong> owes
+                    </span>
+                    <span className="num">{target.owedLabel}</span>
+                  </div>
+                  <div className={c.receiveRule} />
+                  <div className={s.rowBetween}>
+                    <span>{overpaid ? "Only this much is owed" : "Receiving"}</span>
+                    <span className="num">{formatINR(applied)}</span>
+                  </div>
+                  <div className={s.rowBetween}>
+                    <span>Left on their tab</span>
+                    <span className="num">{formatINR(owed - applied)}</span>
+                  </div>
+                  {/* The common case is clearing the lot, so it is one tap. */}
+                  {typedAmount !== owed && (
+                    <button
+                      type="button"
+                      className={c.receiveAll}
+                      onClick={() => shop.setFormAmount(String(owed))}
+                    >
+                      Receive all {target.owedLabel}
+                    </button>
+                  )}
+                </div>
+              ) : shop.formCustomer.trim() !== "" ? (
+                <div className={c.newNote}>
+                  <strong>{shop.formCustomer.trim()}</strong> has nothing owing — money back can
+                  only be recorded against credit already given.
+                </div>
+              ) : null}
+            </div>
+          )}
+
+          {receiving ? (
+            <button
+              type="button"
+              className={s.primaryButton}
+              disabled={!canReceive}
+              onClick={shop.saveReceived}
+            >
+              <IconPlus size={16} color="#fff" />
+              {canReceive ? `Record ${formatINR(applied)} received` : "Record received"}
+            </button>
+          ) : (
+            <button type="button" className={s.primaryButton} onClick={shop.saveBill}>
+              <IconPlus size={16} color="#fff" />
+              Add Bill
+            </button>
+          )}
         </div>
       </div>
     </section>

@@ -9,7 +9,7 @@ import {
   modeMeta,
   PAYMENT_MODES,
 } from "./constants";
-import { daysBetween, formatDateKey, formatINR, formatTime } from "./format";
+import { daysBetween, formatDateKey, formatINR, formatTime, minutesOfDay } from "./format";
 import { quantityLabel, ratePerBase } from "./units";
 import { buildDay, buildPeriod, PERIOD_META } from "./periods";
 import {
@@ -19,7 +19,7 @@ import {
   setApiErrorHandler,
   setDesyncHandler,
 } from "./api";
-import { dateKeyOf, dayBack, dayOptions, todayKey } from "./seed";
+import { calendarKey, dateKeyOf, dayBack, dayOptions, todayKey } from "./seed";
 import type {
   Bill,
   CategoryId,
@@ -52,10 +52,16 @@ export function useShop(signedIn: boolean) {
   /* Re-read at midnight so an app left open overnight starts filing sales
      under the new day instead of yesterday's. */
   const [today, setToday] = useState(todayKey);
+  /* The wall-calendar date, which between midnight and the 3 AM rollover is a
+     day ahead of the trading day. Kept so the screen can say which day it is
+     filing under, and so a date picker still reaches the real today. */
+  const [calendarToday, setCalendarToday] = useState(calendarKey);
   useEffect(() => {
     const id = setInterval(() => {
       const now = todayKey();
       setToday((prev) => (prev === now ? prev : now));
+      const cal = calendarKey();
+      setCalendarToday((prev) => (prev === cal ? prev : cal));
     }, 30_000);
     return () => clearInterval(id);
   }, []);
@@ -123,6 +129,9 @@ export function useShop(signedIn: boolean) {
   /** Which credit bill has its settle field open, and what is typed in it. */
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [settleAmount, setSettleAmount] = useState("");
+  /* The bill form does two jobs: entering a sale, and taking money back
+     against one already given on credit. */
+  const [formKind, setFormKind] = useState<"sale" | "received">("sale");
   const [purchaseSupplier, setPurchaseSupplier] = useState("");
   const [purchaseItem, setPurchaseItem] = useState("");
   const [purchaseAmount, setPurchaseAmount] = useState("");
@@ -764,10 +773,25 @@ export function useShop(signedIn: boolean) {
   }, [creditBills]);
 
   /** Known customers matching what has been typed. Empty query lists all. */
+  /** Only people with something outstanding, for taking a repayment. */
+  const owingMatches = useMemo(() => {
+    const q = formCustomer.trim().toLowerCase();
+    return customerStats
+      .filter((r) => r.owed > 0 && (q === "" || r.customer.toLowerCase().includes(q)))
+      .sort((a, b) => b.owed - a.owed);
+  }, [customerStats, formCustomer]);
+
   const customerMatches = useMemo(() => {
     const q = formCustomer.trim().toLowerCase();
     if (q === "") return customerStats;
     return customerStats.filter((r) => r.customer.toLowerCase().includes(q));
+  }, [customerStats, formCustomer]);
+
+  /** Who a repayment would be credited to, and what is outstanding for them. */
+  const receiveTarget = useMemo(() => {
+    const typed = formCustomer.trim().toLowerCase();
+    if (typed === "") return null;
+    return customerStats.find((r) => r.customer.toLowerCase() === typed) ?? null;
   }, [customerStats, formCustomer]);
 
   /** The person this credit bill would be filed under, if the name exists. */
@@ -1288,6 +1312,59 @@ export function useShop(signedIn: boolean) {
     [bills, today],
   );
 
+  /**
+   * Money handed back against what someone owes, spread over their oldest
+   * unpaid bills first — the way a tab is actually cleared. Anything over the
+   * balance is left alone rather than parked as a credit the shop then owes.
+   */
+  const receiveFrom = useCallback(
+    (customer: string, amount: number, date: string) => {
+      const name = customer.trim().toLowerCase();
+      if (!name || !(amount > 0)) return 0;
+
+      const owing = bills
+        .filter((b) => b.mode === "credit" && (b.customer || "Unnamed").toLowerCase() === name)
+        .map((b) => ({
+          bill: b,
+          owed: Math.max(0, b.amount - (b.creditPayments ?? []).reduce((sum, p) => sum + p.amount, 0)),
+        }))
+        .filter((x) => x.owed > 0)
+        /* Oldest first, and within a day by the time on the bill: several
+           sales on one date are a tie on date alone, which left the order to
+           whatever the database happened to return. */
+        .sort(
+          (a, b) =>
+            a.bill.date.localeCompare(b.bill.date) ||
+            minutesOfDay(a.bill.time) - minutesOfDay(b.bill.time),
+        );
+
+      /* Worked out in full before any state is touched: a write inside a
+         setState updater runs twice under StrictMode, which once turned a
+         ₹200 repayment into ₹400. */
+      let left = Math.round(amount * 100);
+      const pays: { billId: string; id: string; date: string; amount: number }[] = [];
+      for (const { bill, owed } of owing) {
+        if (left <= 0) break;
+        const take = Math.min(left, Math.round(owed * 100));
+        pays.push({ billId: bill.id, id: newId("cp"), date, amount: take / 100 });
+        left -= take;
+      }
+      if (pays.length === 0) return 0;
+
+      setBills((prev) =>
+        prev.map((b) => {
+          const pay = pays.find((x) => x.billId === b.id);
+          if (!pay) return b;
+          const { billId: _billId, ...payment } = pay;
+          return { ...b, creditPayments: [...(b.creditPayments ?? []), payment] };
+        }),
+      );
+      pays.forEach(({ billId, ...payment }) => api.settleBill({ ...payment, billId }));
+      return pays.reduce((sum, p) => sum + p.amount, 0);
+    },
+    [bills],
+  );
+
   const pickCreditDate = useCallback(
     (key: string) => {
       setCreditRange("custom");
@@ -1423,6 +1500,22 @@ export function useShop(signedIn: boolean) {
     api.clearCategory(cat);
   }, []);
 
+  /* Records money taken back. Capped at the balance: a repayment cannot make
+     the shop owe the customer, and quietly banking the excess would hide it. */
+  const saveReceived = useCallback((): boolean => {
+    const amt = parseFloat(formAmount);
+    if (!amt || amt <= 0) return false;
+    const typed = formCustomer.trim().toLowerCase();
+    const known = customerStats.find((r) => r.customer.toLowerCase() === typed);
+    if (!known || known.owed <= 0) return false;
+
+    const taken = receiveFrom(known.customer, Math.min(amt, known.owed), formDate || today);
+    if (taken <= 0) return false;
+    setFormAmount("");
+    setFormCustomer("");
+    return true;
+  }, [formAmount, formCustomer, formDate, customerStats, receiveFrom, today]);
+
   const goAddBill = useCallback(() => {
     setActiveTab("bills");
     setSelectedDate(today);
@@ -1465,6 +1558,8 @@ export function useShop(signedIn: boolean) {
     chartBars,
     categoryBreakdown,
     donutGradient,
+    today,
+    calendarToday,
     todayTotal,
     todayCount: todaysBills.length,
     expenseTotal,
@@ -1603,6 +1698,12 @@ export function useShop(signedIn: boolean) {
     setSettleAmount,
     settleCredit,
     settleAllFor,
+    receiveFrom,
+    saveReceived,
+    receiveTarget,
+    owingMatches,
+    formKind,
+    setFormKind,
     purchaseSupplier,
     setPurchaseSupplier,
     purchaseItem,

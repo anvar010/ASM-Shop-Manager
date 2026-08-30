@@ -96,7 +96,7 @@ export default function BillRowEditor({ shop }: { shop: Shop }) {
             className={s.input}
             type="date"
             value={shop.formDate}
-            max={shop.dayChips[0].key}
+            max={shop.calendarToday}
             onChange={(e) => shop.setFormDate(e.target.value || shop.dayChips[0].key)}
             aria-label="Date the credit was taken"
           />

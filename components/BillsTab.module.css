@@ -540,3 +540,89 @@
     font-size: 26px;
   }
 }
+
+/* ---------------- Sale / Received switch ---------------- */
+
+.kindSwitch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+}
+
+.kindButton {
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  transition: background 0.14s ease, color 0.14s ease;
+}
+
+.kindOn {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* What the repayment does to the tab, before it is recorded. */
+.receiveNote {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-alt);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.receiveRule {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 0;
+}
+
+.receiveAll {
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-dark);
+}
+
+/* Shown only between midnight and the 3 AM rollover. */
+.nightNote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--warning-bg, var(--surface-alt));
+  color: var(--text-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.nightSwitch {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--primary-dark);
+  font-size: 11px;
+  font-weight: 700;
+}
