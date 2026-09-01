@@ -14,5 +14,9 @@ export async function currentUser(): Promise<SessionUser | null> {
  */
 export function canAccess(role: Role, area: "bills" | "purchases" | "expenses" | "reports") {
   if (role === "admin") return true;
-  return area === "bills" || area === "purchases";
+  /* Staff keep the shop running day to day, which includes paying for things
+     out of the till, so expenses are theirs to record as well. Reports stay
+     with the owner: what the shop earns is a different question from what it
+     spends. */
+  return area === "bills" || area === "purchases" || area === "expenses";
 }

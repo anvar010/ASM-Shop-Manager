@@ -39,7 +39,7 @@ export const TABS: Tab[] = [
   { id: "bills", label: "Bills", title: "Daily Bills", Icon: IconBill },
   { id: "overview", label: "Overview", title: "Overview", Icon: IconTrend, adminOnly: true },
   { id: "credits", label: "Credits", title: "Credit Customers", Icon: IconUsers, staffOnly: true, href: "/credits" },
-  { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote, adminOnly: true },
+  { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote },
   { id: "stock", label: "Stock", title: "Stock Purchases", Icon: IconBox },
   { id: "calculator", label: "Calculator", title: "Calculator", Icon: IconCalculator, tabletOnly: true },
 ];
@@ -81,7 +81,7 @@ function AccountMenu() {
           <div className={styles.accountMenu}>
             <div className={styles.accountName}>{user?.name ?? "Signed in"}</div>
             <div className={styles.accountRole}>
-              {user?.role === "admin" ? "Owner · full access" : "Staff · bills and stock"}
+              {user?.role === "admin" ? "Owner · full access" : "Staff · counter and spending"}
             </div>
             {user?.role === "admin" && <NotificationToggle />}
             <button type="button" className={styles.signOut} onClick={signOut}>

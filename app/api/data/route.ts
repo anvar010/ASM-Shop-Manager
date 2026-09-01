@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { currentUser } from "@/lib/session";
+import { canAccess, currentUser } from "@/lib/session";
 import { toBill, toExpense, toPurchase } from "@/lib/rows";
 
 // The ledger changes on every write, so this must never be cached.
@@ -17,12 +17,12 @@ export async function GET() {
     const [creditPays] = await pool.query(
       "SELECT id, bill_id AS parent_id, paid_on, amount FROM bill_credit_payments ORDER BY paid_on",
     );
-    /* Staff never see expenses, so the server does not send them — hiding
-       the tab alone would leave the data one API call away. */
-    const [expenseRows] =
-      user.role === "admin"
-        ? await pool.query("SELECT * FROM expenses ORDER BY spent_on DESC, spent_at DESC")
-        : [[]];
+    /* Expenses go to whoever may record them, which is now staff as well as
+       the owner. Gated on the same rule the write routes use, so the tab and
+       the data can never disagree. */
+    const [expenseRows] = canAccess(user.role, "expenses")
+      ? await pool.query("SELECT * FROM expenses ORDER BY spent_on DESC, spent_at DESC")
+      : [[]];
     const [purchaseRows] = await pool.query("SELECT * FROM purchases ORDER BY bought_on DESC");
     const [priceRows] = await pool.query(
       "SELECT id, name, category, price, per_qty AS perQty, unit FROM price_items ORDER BY category, name",
