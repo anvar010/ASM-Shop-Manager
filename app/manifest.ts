@@ -9,7 +9,12 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
+    /* The layouts are built for both ways round — the calculator and its price
+       list sit side by side, and the tabs go two columns wide — so the app
+       follows the device rather than pinning itself upright. A locked
+       orientation only bites once installed, which is why it rotated in the
+       browser and not on the home screen. */
+    orientation: "any",
     background_color: "#f7f7f5",
     theme_color: "#f7f7f5",
     categories: ["business", "finance", "productivity"],
