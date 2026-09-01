@@ -531,8 +531,11 @@ export default function BillsTab({ shop }: { shop: Shop }) {
 
   return (
     <div>
+      <div className={c.layout}>
       {/* Date filter — each card carries that day's total, so you can often
-          read what you need without opening the day at all. */}
+          read what you need without opening the day at all. On a wide screen
+          it sits over the right-hand column, so the form on the left starts at
+          the top of the page instead of a strip's height down it. */}
       <div className={`${c.dayStrip} scrollX`}>
         {shop.dayChips.map((d) => (
           <button
@@ -564,20 +567,25 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         </div>
       )}
 
-      <div className={c.layout}>
         <div className={c.leftCol} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <section className={`${s.banner} ${s.bannerPrimary}`}>
-            <div className={s.bannerLabel}>
-              {shop.isTodayView
-                ? "Total collected today"
-                : `Total collected ${shop.selectedDay.long}`}
-            </div>
-            <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewTotal)}</div>
-            <div className={s.bannerLabel}>
-              {shop.viewCount} {shop.viewCount === 1 ? "bill" : "bills"}
-              {shop.isTodayView ? " today" : ""}
+          {/* Two halves — the day's total, and where that money sits. Stacked on
+              a phone; side by side once there is width, which halves the height
+              and lets the form below stay on screen. */}
+          <section className={`${s.banner} ${s.bannerPrimary} ${c.summary}`}>
+            <div className={c.summaryTotal}>
+              <div className={s.bannerLabel}>
+                {shop.isTodayView
+                  ? "Total collected today"
+                  : `Total collected ${shop.selectedDay.long}`}
+              </div>
+              <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewTotal)}</div>
+              <div className={s.bannerLabel}>
+                {shop.viewCount} {shop.viewCount === 1 ? "bill" : "bills"}
+                {shop.isTodayView ? " today" : ""}
+              </div>
             </div>
             <div className={s.bannerRule} />
+            <div className={c.summarySplit}>
             <div className={s.rowBetween}>
               <div className={s.bannerLabel}>Cash in drawer</div>
               <div className="num" style={{ fontSize: 20, color: "#fff" }}>
@@ -601,6 +609,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 </div>
               </div>
             )}
+            </div>
           </section>
 
           {showForm && form}

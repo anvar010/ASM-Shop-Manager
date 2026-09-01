@@ -10,8 +10,30 @@
 
 @media (min-width: 900px) {
   .layout {
-    grid-template-columns: 380px minmax(0, 1fr);
+    grid-template-columns: 530px minmax(0, 1fr);
     align-items: start;
+  }
+}
+
+/* Landscape tablet. The keypad is the thing being touched, so it takes the
+   extra room before the price list does. */
+@media (min-width: 1180px) {
+  .layout {
+    grid-template-columns: 630px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .key {
+    height: 78px;
+    font-size: 22px;
+  }
+
+  .keyOp {
+    font-size: 26px;
+  }
+
+  .displayValue {
+    font-size: 54px;
   }
 }
 
@@ -281,8 +303,24 @@
 }
 
 @media (min-width: 1280px) {
-  .priceList {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .layout {
+    grid-template-columns: 720px minmax(0, 1fr);
+  }
+}
+
+@media (min-width: 1536px) {
+  .layout {
+    grid-template-columns: 800px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .key {
+    height: 86px;
+    font-size: 24px;
+  }
+
+  .displayValue {
+    font-size: 64px;
   }
 }
 
