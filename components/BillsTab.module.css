@@ -334,7 +334,10 @@
 
   .layout {
     display: grid;
-    grid-template-columns: 340px minmax(0, 1fr);
+    /* The form takes as much as it can up to 540px, but the entries list is
+       guaranteed 340px first — stated as a floor rather than a percentage, so
+       a 7" tablet and a 13" one both stay readable without a tier each. */
+    grid-template-columns: minmax(0, 540px) minmax(340px, 1fr);
     grid-template-rows: auto auto 1fr;
     gap: 20px;
     align-items: start;
