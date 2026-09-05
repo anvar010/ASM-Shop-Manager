@@ -69,7 +69,16 @@
   overflow: hidden;
 }
 
+/* The head and the share link share a row: the head is a button and cannot
+   hold a link inside it. */
+.personRow {
+  display: flex;
+  align-items: stretch;
+}
+
 .personHead {
+  flex: 1;
+  min-width: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -365,5 +374,36 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     align-items: start;
+  }
+}
+
+/* Sending a customer their tab is a quiet, everyday action, so it sits to the
+   side in WhatsApp's own green rather than competing with the balance. */
+.share {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  margin: 8px 8px 8px 0;
+  border-radius: var(--radius-sm);
+  background: #e7f6ec;
+  color: #1c8c4b;
+  transition: background 0.14s ease;
+}
+
+.share:hover {
+  background: #d5eedd;
+}
+
+.share:focus-visible {
+  outline: 2px solid #1c8c4b;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .share {
+    background: rgba(28, 140, 75, 0.16);
+    color: #5fce8d;
   }
 }

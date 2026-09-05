@@ -8,6 +8,11 @@ export default async function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const user = await readSession(request.cookies.get(SESSION_COOKIE)?.value);
 
+  /* A customer's own tab is meant to be opened by the customer, who has no
+     account here. The link itself is the credential: it is signed with
+     AUTH_SECRET and cannot be guessed from a name. */
+  if (pathname.startsWith("/tab/")) return NextResponse.next();
+
   if (pathname === "/login") {
     // Already signed in? No reason to show the form again.
     if (user) return NextResponse.redirect(new URL("/", request.url));

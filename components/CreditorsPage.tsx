@@ -8,7 +8,14 @@ import AppShell from "./AppShell";
 import CalendarFilter from "./CalendarFilter";
 import s from "./shared.module.css";
 import c from "./CreditorsPage.module.css";
-import { IconAlert, IconBill, IconCalendar, IconChevron, IconSearch } from "./Icons";
+import {
+  IconAlert,
+  IconBill,
+  IconCalendar,
+  IconChevron,
+  IconSearch,
+  IconWhatsapp,
+} from "./Icons";
 
 export default function CreditorsPage() {
   const shop = useShopContext();
@@ -141,6 +148,7 @@ export default function CreditorsPage() {
             const open = forceOpen || openNames.includes(g.customer);
             return (
               <div key={g.customer} className={`${s.cardSm} ${c.personCard}`}>
+                <div className={c.personRow}>
                 <button
                   type="button"
                   className={c.personHead}
@@ -167,6 +175,21 @@ export default function CreditorsPage() {
                     </span>
                   </span>
                 </button>
+
+                {/* A plain link, so WhatsApp opens in the same tap that made
+                    it — building the address in script and opening a window
+                    afterwards is what pop-up blocking stops. */}
+                <a
+                  className={c.share}
+                  href={`/api/tab/share?customer=${encodeURIComponent(g.customer)}&owed=${g.owed}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Send ${g.customer} their tab on WhatsApp`}
+                  title="Send this tab on WhatsApp"
+                >
+                  <IconWhatsapp size={17} color="currentColor" />
+                </a>
+                </div>
 
                 {open && (
                   <div className={c.bills}>

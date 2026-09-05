@@ -126,6 +126,23 @@ export function IconDivide({ size = 16, color = "currentColor", style }: IconPro
   );
 }
 
+/* WhatsApp's glyph is a filled mark, not a stroked one, so it is drawn on its
+   own terms rather than forced into the stroke style of the others. */
+export function IconWhatsapp({ size = 16, color = "currentColor", style }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill={color}
+      style={style}
+      aria-hidden="true"
+    >
+      <path d="M12.04 2.5A9.42 9.42 0 0 0 2.6 11.9c0 1.66.43 3.28 1.26 4.71L2.5 21.5l5.03-1.32a9.4 9.4 0 0 0 4.5 1.15h.01a9.42 9.42 0 0 0 9.44-9.4 9.36 9.36 0 0 0-2.76-6.65 9.32 9.32 0 0 0-6.68-2.78Zm0 1.59a7.8 7.8 0 0 1 5.55 2.31 7.78 7.78 0 0 1 2.3 5.54 7.83 7.83 0 0 1-7.85 7.81 7.82 7.82 0 0 1-3.98-1.09l-.29-.17-2.98.78.8-2.91-.19-.3a7.75 7.75 0 0 1-1.2-4.15 7.83 7.83 0 0 1 7.84-7.82Zm-3.4 4.2c-.16 0-.42.06-.64.3-.22.24-.85.83-.85 2.02 0 1.19.87 2.34.99 2.5.12.16 1.7 2.6 4.13 3.54 2.02.79 2.43.63 2.87.59.44-.04 1.42-.58 1.62-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28-.24-.12-1.42-.7-1.64-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.93-1.19-.71-.63-1.19-1.42-1.33-1.66-.14-.24-.02-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.53-1.3-.74-1.78-.19-.46-.39-.4-.53-.4h-.47Z" />
+    </svg>
+  );
+}
+
 export function IconPencil({ size = 13, color = "currentColor", style }: IconProps) {
   return (
     <svg {...base(size, color, style)} aria-hidden="true">

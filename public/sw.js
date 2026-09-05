@@ -2,7 +2,7 @@
  * Bumping this name is what retires an old cache: the activate handler below
  * deletes every cache that is not the current one.
  */
-const CACHE = "asm-shell-v6";
+const CACHE = "asm-shell-v7";
 
 /*
  * Static assets only. Pages must not be precached: fetching them while signed
@@ -112,8 +112,16 @@ self.addEventListener("push", (event) => {
       body: data.body,
       icon: "/icon-192.png",
       badge: "/icon-192.png",
-      // Same tag replaces the previous one rather than stacking a pile up.
-      tag: data.tag || "asm",
+      /* Same tag replaces the previous one rather than stacking a pile up.
+         Without a tag of its own each message is its own notification: a
+         shared fallback meant an expense alert silently overwrote a payment
+         one. */
+      tag: data.tag || `asm-${Date.now()}`,
+      /* A replacement is silent unless this is set, so a second payment from
+         the same customer used to arrive with no sound at all — the one case
+         where being told matters most. */
+      renotify: true,
+      vibrate: [90, 60, 90],
       data: { url: data.url || "/" },
     }),
   );
