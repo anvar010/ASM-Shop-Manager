@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   /* The two lines the customer is being asked to act on are in Malayalam,
      which is what most of them read. The name and the figure stay as they are
      written in the book. */
-  const seeTheList = "എടുത്തതിന്റെയും അടച്ചതിന്റെയും പൂർണ്ണ വിവരം ഇവിടെ കാണാം:";
+  const seeTheList = "വാങ്ങിയതിന്റെയും തിരിച്ചടച്ചതിന്റെയും പൂർണ്ണ വിവരം ഇവിടെ കാണാം:";
   const haveALook = "സൗകര്യം പോലെ ഒന്ന് നോക്കുമല്ലോ. നന്ദി!";
 
   const message =
