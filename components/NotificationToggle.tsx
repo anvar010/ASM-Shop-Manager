@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import styles from "./AppShell.module.css";
 import { IconBell, IconBellOff, IconTimes } from "./Icons";
 
@@ -17,111 +17,147 @@ function toKey(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
-/**
- * Shared state for both places this appears: an icon in the header, and a
- * labelled row in the account menu that has room to explain itself.
+/*
+ * One state for every place this shows — the bell, the banner and the account
+ * menu. Each used to keep its own copy, so turning notifications on from the
+ * banner left the bell still showing "off" until the page reloaded.
  */
-function useNotifications() {
-  const [state, setState] = useState<State>("loading");
-  const [error, setError] = useState("");
+let current: State = "loading";
+const listeners = new Set<() => void>();
+let detecting = false;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const supported =
-      "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
-    if (!supported || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-      setState("unsupported");
-      return;
-    }
-    if (Notification.permission === "denied") {
-      setState("denied");
-      return;
-    }
+function set(next: State) {
+  if (current === next) return;
+  current = next;
+  listeners.forEach((l) => l());
+}
 
-    /* serviceWorker.ready never settles when no worker activates — it does not
-       reject either — so waiting on it alone left this stuck on "loading" and
-       rendering nothing at all. Assume off unless a subscription turns up. */
-    let done = false;
-    const settle = (s: State) => {
-      if (!done) {
-        done = true;
-        setState(s);
-      }
-    };
-    const timeout = setTimeout(() => settle("off"), 3000);
+function detect() {
+  if (detecting || typeof window === "undefined") return;
+  detecting = true;
 
-    navigator.serviceWorker.ready
-      .then((reg) => reg.pushManager.getSubscription())
-      .then((sub) => {
-        clearTimeout(timeout);
-        settle(sub ? "on" : "off");
-      })
-      .catch(() => {
-        clearTimeout(timeout);
-        settle("off");
-      });
-
-    return () => clearTimeout(timeout);
-  }, []);
-
-  async function enable() {
-    setState("working");
-    setError("");
-    try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setState(permission === "denied" ? "denied" : "off");
-        return;
-      }
-      /* ready never settles when no worker is active (e.g. the dev server,
-         which unregisters it), so bound the wait instead of hanging. */
-      const reg = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("no service worker")), 5000),
-        ),
-      ]);
-      const sub = await reg.pushManager.subscribe({
-        // Web push forbids silent messages; every one shows a notification.
-        userVisibleOnly: true,
-        applicationServerKey: toKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
-      });
-      const res = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(sub),
-      });
-      if (!res.ok) setError("Could not save. Try again.");
-      setState(res.ok ? "on" : "off");
-    } catch (e) {
-      setError(
-        e instanceof Error && e.message === "no service worker"
-          ? "Not available here. Use the installed app."
-          : "Could not turn on. Try again.",
-      );
-      setState("off");
-    }
+  const supported =
+    "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  if (!supported || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
+    set("unsupported");
+    return;
+  }
+  if (Notification.permission === "denied") {
+    set("denied");
+    return;
   }
 
-  async function disable() {
-    setState("working");
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
+  /* serviceWorker.ready never settles when no worker activates — it does not
+     reject either — so waiting on it alone left this stuck on "loading" and
+     rendering nothing at all. Assume off unless a subscription turns up. */
+  let done = false;
+  const settle = (s: State) => {
+    if (!done) {
+      done = true;
+      set(s);
+    }
+  };
+  const timeout = setTimeout(() => settle("off"), 3000);
+
+  navigator.serviceWorker.ready
+    .then((reg) => reg.pushManager.getSubscription())
+    .then((sub) => {
+      clearTimeout(timeout);
+      settle(sub ? "on" : "off");
+      /* Re-register what this browser holds. The server may have lost the row
+         (a pruned endpoint, a different database), and the bell would keep
+         saying "on" while nothing was ever sent here. It is an upsert. */
       if (sub) {
-        await fetch("/api/push/subscribe", {
-          method: "DELETE",
+        fetch("/api/push/subscribe", {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
+          body: JSON.stringify(sub),
+        }).catch(() => {
+          /* Offline: it will be re-sent next time the app opens. */
         });
-        await sub.unsubscribe();
       }
-      setState("off");
-    } catch {
-      setState("on");
-    }
-  }
+    })
+    .catch(() => {
+      clearTimeout(timeout);
+      settle("off");
+    });
+}
 
+let currentError = "";
+function setError(message: string) {
+  currentError = message;
+  listeners.forEach((l) => l());
+}
+
+async function enable() {
+  set("working");
+  setError("");
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      set(permission === "denied" ? "denied" : "off");
+      return;
+    }
+    /* ready never settles when no worker is active (e.g. the dev server,
+       which unregisters it), so bound the wait instead of hanging. */
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("no service worker")), 5000),
+      ),
+    ]);
+    const sub = await reg.pushManager.subscribe({
+      // Web push forbids silent messages; every one shows a notification.
+      userVisibleOnly: true,
+      applicationServerKey: toKey(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+    });
+    const res = await fetch("/api/push/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub),
+    });
+    if (!res.ok) setError("Could not save. Try again.");
+    set(res.ok ? "on" : "off");
+  } catch (e) {
+    setError(
+      e instanceof Error && e.message === "no service worker"
+        ? "Not available here. Use the installed app."
+        : "Could not turn on. Try again.",
+    );
+    set("off");
+  }
+}
+
+async function disable() {
+  set("working");
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      await fetch("/api/push/subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      await sub.unsubscribe();
+    }
+    set("off");
+  } catch {
+    set("on");
+  }
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  detect();
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+function useNotifications() {
+  const state = useSyncExternalStore(subscribe, () => current, () => "loading" as State);
+  const error = useSyncExternalStore(subscribe, () => currentError, () => "");
   return { state, error, toggle: () => (state === "on" ? disable() : enable()) };
 }
 
