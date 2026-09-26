@@ -13,6 +13,10 @@ export default async function proxy(request: NextRequest) {
      AUTH_SECRET and cannot be guessed from a name. */
   if (pathname.startsWith("/tab/")) return NextResponse.next();
 
+  /* The scheduler has no session. The route itself refuses anything without
+     the CRON_SECRET bearer token, so letting it through here is safe. */
+  if (pathname.startsWith("/api/cron/")) return NextResponse.next();
+
   if (pathname === "/login") {
     // Already signed in? No reason to show the form again.
     if (user) return NextResponse.redirect(new URL("/", request.url));
