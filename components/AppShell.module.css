@@ -483,3 +483,30 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+/* Offline / waiting-to-sync indicator. */
+.syncPill {
+  position: fixed;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 31;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  box-shadow: var(--shadow-md);
+  font-size: 12px;
+  font-weight: 700;
+  /* The Malayalam message is longer than the English was. */
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.syncRetry {
+  font: inherit;
+  color: inherit;
+}

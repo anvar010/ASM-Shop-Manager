@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useShopContext, useUser } from "@/lib/shopContext";
+import { clearOfflineData, flushOutbox, syncStore } from "@/lib/api";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
@@ -60,6 +61,7 @@ function AccountMenu() {
   const [open, setOpen] = useState(false);
 
   async function signOut() {
+    await clearOfflineData();
     await fetch("/api/auth/logout", { method: "POST" });
     window.location.href = "/login";
   }
@@ -94,6 +96,33 @@ function AccountMenu() {
   );
 }
 
+/** Says so when the connection is down or changes are still waiting to send. */
+function useSyncStatus() {
+  return useSyncExternalStore(
+    syncStore.subscribe,
+    syncStore.getSnapshot,
+    syncStore.getServerSnapshot,
+  );
+}
+
+function SyncPill() {
+  const { online, pending } = useSyncStatus();
+  if (online && pending === 0) return null;
+
+  const waiting = pending > 0 ? ` · ${pending} എണ്ണം അയക്കാനുണ്ട്` : "";
+  return (
+    <div className={styles.syncPill} role="status">
+      {online ? (
+        <button type="button" className={styles.syncRetry} onClick={() => void flushOutbox()}>
+          അയക്കുന്നു{waiting} — വീണ്ടും ശ്രമിക്കാൻ ടാപ്പ് ചെയ്യുക
+        </button>
+      ) : (
+        <>നിങ്ങൾ ഇപ്പോൾ ഓഫ്‌ലൈനാണ്, ബില്ലുകൾ ഇപ്പോഴും ചേർക്കാം{waiting}</>
+      )}
+    </div>
+  );
+}
+
 export default function AppShell({
   title,
   back,
@@ -108,6 +137,7 @@ export default function AppShell({
   const tabs = tabsFor(user?.role);
   const router = useRouter();
   const pathname = usePathname();
+  const syncing = useSyncStatus();
   const onHome = pathname === "/";
 
   function openTab(tab: Tab) {
@@ -194,7 +224,9 @@ export default function AppShell({
         </div>
       )}
 
-      {user?.role === "admin" && <NotificationBanner />}
+      <SyncPill />
+      {/* Both sit just above the tab bar, so the sync notice takes the spot. */}
+      {user?.role === "admin" && syncing.online && syncing.pending === 0 && <NotificationBanner />}
       <nav className={styles.nav} aria-label="Main">
         {tabs.map((tab) => {
           const { id, label, Icon } = tab;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { alreadyStored } from "@/lib/idempotent";
 import { currentUser } from "@/lib/session";
 import { sendSettlementAlert } from "@/lib/changes";
 import { formatINR } from "@/lib/format";
@@ -14,6 +15,7 @@ export async function POST(request: Request) {
   }
   try {
     const { id, purchaseId, date, amount } = await request.json();
+    if (await alreadyStored("purchase_payments", id)) return NextResponse.json({ ok: true });
 
     const [rows] = await db().query(
       `SELECT w.supplier, w.item,

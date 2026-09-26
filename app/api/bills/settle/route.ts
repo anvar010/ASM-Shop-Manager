@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { alreadyStored } from "@/lib/idempotent";
 import { currentUser } from "@/lib/session";
 import { sendSettlementAlert } from "@/lib/changes";
 import { pushToAdmins } from "@/lib/push";
@@ -15,6 +16,7 @@ export async function POST(request: Request) {
   }
   try {
     const { id, billId, date, amount } = await request.json();
+    if (await alreadyStored("bill_credit_payments", id)) return NextResponse.json({ ok: true });
 
     /* The balance before this payment, so the alert can show what it cleared
        rather than just the figure handed over. */

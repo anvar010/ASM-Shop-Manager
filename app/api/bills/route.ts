@@ -4,6 +4,8 @@ import { currentUser } from "@/lib/session";
 import { timeToSql } from "@/lib/rows";
 import { BILL_FIELDS, diff, sendChangeAlert, sendDeleteAlert } from "@/lib/changes";
 import { formatINR } from "@/lib/format";
+import { alreadyStored } from "@/lib/idempotent";
+import { alertIfOverLimit } from "@/lib/credit";
 import { categoryMeta, modeMeta } from "@/lib/constants";
 import { formatDateKey } from "@/lib/format";
 import type { Bill } from "@/lib/types";
@@ -16,6 +18,7 @@ export async function POST(request: Request) {
   }
   try {
     const bill = (await request.json()) as Bill;
+    if (await alreadyStored("bills", bill.id)) return NextResponse.json({ ok: true });
     await db().execute(
       `INSERT INTO bills (id, sold_on, sold_at, description, category, amount, mode, customer)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -31,6 +34,7 @@ export async function POST(request: Request) {
         bill.mode === "credit" ? (bill.customer ?? "Unnamed") : null,
       ],
     );
+    if (bill.mode === "credit") await alertIfOverLimit(bill.customer ?? "Unnamed", bill.amount);
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("POST /api/bills", e);
@@ -72,6 +76,15 @@ export async function PATCH(request: Request) {
     // Repayments only belong to a credit sale; changing the mode retires them.
     if (!credit) {
       await db().execute("DELETE FROM bill_credit_payments WHERE bill_id = ?", [bill.id]);
+    }
+
+    if (credit) {
+      // Only the increase counts: an edit that lowers a debt cannot cross the limit.
+      const wasSame = before?.mode === "credit" && before?.customer === bill.customer;
+      await alertIfOverLimit(
+        bill.customer ?? "Unnamed",
+        bill.amount - (wasSame ? Number(before?.amount ?? 0) : 0),
+      );
     }
 
     if (before) {

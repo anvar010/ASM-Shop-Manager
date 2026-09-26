@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { alreadyStored } from "@/lib/idempotent";
 import { canAccess, currentUser } from "@/lib/session";
 import { timeToSql } from "@/lib/rows";
 import { diff, EXPENSE_FIELDS, sendChangeAlert, sendDeleteAlert } from "@/lib/changes";
@@ -17,6 +18,7 @@ export async function POST(request: Request) {
   }
   try {
     const expense = (await request.json()) as Expense;
+    if (await alreadyStored("expenses", expense.id)) return NextResponse.json({ ok: true });
     await db().execute(
       `INSERT INTO expenses (id, spent_on, spent_at, description, category, amount)
        VALUES (?, ?, ?, ?, ?, ?)`,

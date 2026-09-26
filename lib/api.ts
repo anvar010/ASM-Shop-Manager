@@ -25,6 +25,171 @@ export function setDesyncHandler(handler: () => void) {
   onDesync = handler;
 }
 
+/* ------------------------------------------------------------------ *
+ * Offline
+ *
+ * A write that cannot reach the server is kept in an outbox on the device and
+ * replayed, in order, once it can. The screen has already moved on
+ * optimistically, so from the shop floor a dropped connection looks like
+ * nothing at all — the banner is the only sign.
+ *
+ * The last good ledger is also kept, so a server that cannot be reached at
+ * load time still shows the book rather than an error.
+ * ------------------------------------------------------------------ */
+
+const OUTBOX_KEY = "asm-outbox-v1";
+const LEDGER_KEY = "asm-ledger-v1";
+
+interface Queued {
+  path: string;
+  method: string;
+  body?: string;
+  what: string;
+  tries?: number;
+}
+
+/*
+ * Read from storage on every use, never cached: two tabs share this queue, and
+ * a private copy in each would overwrite the other's entries on save.
+ */
+let memory: Queued[] = [];
+function box(): Queued[] {
+  try {
+    memory = JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? "[]");
+  } catch {
+    /* Storage blocked: fall back to what this page holds. */
+  }
+  return memory;
+}
+
+export interface SyncStatus {
+  online: boolean;
+  pending: number;
+}
+const SERVER_STATUS: SyncStatus = { online: true, pending: 0 };
+let status: SyncStatus = SERVER_STATUS;
+const listeners = new Set<() => void>();
+
+function emit() {
+  const online = typeof navigator === "undefined" ? true : navigator.onLine;
+  const pending = typeof window === "undefined" ? 0 : box().length;
+  if (status.online !== online || status.pending !== pending) {
+    status = { online, pending };
+    listeners.forEach((l) => l());
+  }
+}
+
+function persist(q: Queued[] = memory) {
+  memory = q;
+  try {
+    localStorage.setItem(OUTBOX_KEY, JSON.stringify(q));
+  } catch {
+    /* Storage full or blocked: the queue still works until the page closes. */
+  }
+  emit();
+}
+
+export const syncStore = {
+  subscribe(listener: () => void) {
+    if (listeners.size === 0 && typeof window !== "undefined") {
+      status = { online: navigator.onLine, pending: box().length };
+      window.addEventListener("online", onOnline);
+      window.addEventListener("offline", emit);
+      // Changes left over from a closed tab go out as soon as the app opens.
+      if (navigator.onLine && box().length > 0) void flushOutbox();
+    }
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+      if (listeners.size === 0) {
+        window.removeEventListener("online", onOnline);
+        window.removeEventListener("offline", emit);
+      }
+    };
+  },
+  getSnapshot: () => status,
+  getServerSnapshot: () => SERVER_STATUS,
+};
+
+function onOnline() {
+  emit();
+  void flushOutbox();
+}
+
+let flushing: Promise<void> | null = null;
+
+/** A server error that may clear up is retried; this many failures and it is given up on. */
+const MAX_TRIES = 5;
+
+async function drain() {
+  for (;;) {
+    const item = box()[0];
+    if (!item) return;
+
+    let res: Response;
+    try {
+      res = await fetch(item.path, {
+        method: item.method,
+        headers: item.body ? { "Content-Type": "application/json" } : undefined,
+        body: item.body,
+      });
+    } catch {
+      return; // still offline; try again on the next reconnect
+    }
+    if (signedOut(res)) return;
+
+    if (!res.ok && res.status >= 500 && (item.tries ?? 0) + 1 < MAX_TRIES) {
+      /* The server hiccuped. Dropping the entry would lose a real sale, and
+         skipping past it would let later edits land before it. Keep it at the
+         head and stop; the next reconnect or tap tries again. */
+      const q = box();
+      q[0] = { ...item, tries: (item.tries ?? 0) + 1 };
+      persist(q);
+      return;
+    }
+
+    const q = box().slice(1);
+    persist(q);
+    if (!res.ok) {
+      onError?.(
+        `Could not save ${item.what} after reconnecting. The screen has been put back to what is saved.`,
+      );
+      onDesync?.();
+    }
+  }
+}
+
+/**
+ * Sends what is waiting, oldest first, stopping at the first failure. Only one
+ * tab drains at a time, or the same entry would go out twice.
+ */
+export function flushOutbox(): Promise<void> {
+  if (flushing) return flushing;
+  const run = () => drain();
+  const attempt: Promise<void> =
+    typeof navigator !== "undefined" && navigator.locks
+      ? navigator.locks.request("asm-outbox", run).then(() => undefined)
+      : run();
+  const done: Promise<void> = attempt.finally(() => {
+    flushing = null;
+    emit();
+  });
+  flushing = done;
+  return done;
+}
+
+/** Signing out must not leave one person's book on a shared device. */
+export async function clearOfflineData() {
+  await flushOutbox();
+  try {
+    localStorage.removeItem(OUTBOX_KEY);
+    localStorage.removeItem(LEDGER_KEY);
+  } catch {
+    /* Nothing stored. */
+  }
+  persist([]);
+}
+
 /** A dead session cannot be retried out of; send them to sign in again. */
 function signedOut(res: Response): boolean {
   if (res.status !== 401) return false;
@@ -37,25 +202,38 @@ function signedOut(res: Response): boolean {
 }
 
 async function send(path: string, init: RequestInit, what: string) {
-  try {
-    const res = await fetch(path, init);
-    if (signedOut(res)) return false;
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      onError?.(
-        `${body.error ?? `Could not save ${what}`}. The screen has been put back to what is saved.`,
-      );
-      onDesync?.();
-      return false;
-    }
+  const queued: Queued = {
+    path,
+    method: init.method ?? "POST",
+    body: typeof init.body === "string" ? init.body : undefined,
+    what,
+  };
+
+  /* Anything already waiting goes first, or a later edit could land before
+     the sale it edits. */
+  if (box().length > 0) {
+    persist([...box(), queued]);
+    void flushOutbox();
     return true;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(path, init);
   } catch {
+    persist([...box(), queued]);
+    return true;
+  }
+  if (signedOut(res)) return false;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
     onError?.(
-      `Could not reach the server to save ${what}. The screen has been put back to what is saved.`,
+      `${body.error ?? `Could not save ${what}`}. The screen has been put back to what is saved.`,
     );
     onDesync?.();
     return false;
   }
+  return true;
 }
 
 const json = (body: unknown): RequestInit => ({
@@ -77,6 +255,12 @@ export async function loadLedger(background = false): Promise<{
   prices: PriceItem[];
   categories: string[];
 } | null> {
+  /* Unsent changes would be wiped by a fresh read, so send them first; if they
+     cannot go yet, leave the screen exactly as it is. */
+  if (box().length > 0) {
+    await flushOutbox();
+    if (box().length > 0) return null;
+  }
   try {
     const res = await fetch("/api/data", { cache: "no-store" });
     if (signedOut(res)) return null;
@@ -88,8 +272,25 @@ export async function loadLedger(background = false): Promise<{
       );
       return null;
     }
-    return await res.json();
+    const data = await res.json();
+    try {
+      localStorage.setItem(LEDGER_KEY, JSON.stringify(data));
+    } catch {
+      /* Too big or blocked: only the offline fallback is lost. */
+    }
+    return data;
   } catch {
+    if (!background) {
+      try {
+        const cached = localStorage.getItem(LEDGER_KEY);
+        if (cached) {
+          onError?.("You are offline — showing the data last loaded");
+          return JSON.parse(cached);
+        }
+      } catch {
+        /* Fall through to the plain error. */
+      }
+    }
     onError?.(
       background
         ? "Could not refresh just now — still showing the data last loaded"
