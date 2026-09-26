@@ -9,6 +9,7 @@ import AppShell from "./AppShell";
 import s from "./shared.module.css";
 import c from "./OverviewReport.module.css";
 import CalendarFilter from "./CalendarFilter";
+import ClosingHistory from "./ClosingHistory";
 import { IconCalendar, IconTrend } from "./Icons";
 
 const PERIODS: { id: PeriodId; label: string }[] = [
@@ -251,6 +252,7 @@ export default function OverviewReport() {
         )}
       </section>
 
+      <ClosingHistory />
       <ExportCard />
     </AppShell>
   );
@@ -270,7 +272,8 @@ function ExportCard() {
   const KINDS = [
     { type: "bills", label: "Bills" },
     { type: "expenses", label: "Expenses" },
-    { type: "purchases", label: "Stock purchases" },
+    { type: "purchases", label: "Supplier purchases" },
+    { type: "closings", label: "Daily closings" },
   ];
 
   return (

@@ -145,3 +145,24 @@ SELECT
 FROM purchases w
 LEFT JOIN purchase_payments p ON p.purchase_id = w.id
 GROUP BY w.id, w.supplier, w.bought_on, w.amount, w.paid_upfront;
+
+-- ---------------------------------------------------------------------------
+-- Daily closing (see db/daily-closings.sql)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS daily_closings (
+  closed_on    DATE          NOT NULL,
+  -- What the books say the drawer should hold, worked out when it was closed.
+  expected     DECIMAL(12,2) NOT NULL,
+  -- What was actually counted.
+  counted      DECIMAL(12,2) NOT NULL,
+  -- counted - expected: negative is a shortage, positive an excess.
+  difference   DECIMAL(12,2) NOT NULL,
+  taken_out    DECIMAL(12,2) NOT NULL DEFAULT 0,
+  note         VARCHAR(255)  NULL,
+  closed_by    VARCHAR(120)  NOT NULL,
+  created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (closed_on),
+  CONSTRAINT chk_closing_counted CHECK (counted >= 0)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

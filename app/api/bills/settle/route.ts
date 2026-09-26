@@ -15,7 +15,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not signed in" }, { status: 401 });
   }
   try {
-    const { id, billId, date, amount } = await request.json();
+    const { id, billId, date, amount, mode } = await request.json();
+    const how = mode === "upi" ? "upi" : "cash";
     if (await alreadyStored("bill_credit_payments", id)) return NextResponse.json({ ok: true });
 
     /* The balance before this payment, so the alert can show what it cleared
@@ -30,10 +31,20 @@ export async function POST(request: Request) {
     );
     const bill = (rows as Record<string, unknown>[])[0];
 
-    await db().execute(
-      "INSERT INTO bill_credit_payments (id, bill_id, paid_on, amount) VALUES (?, ?, ?, ?)",
-      [id, billId, date, amount],
-    );
+    try {
+      await db().execute(
+        "INSERT INTO bill_credit_payments (id, bill_id, paid_on, amount, mode) VALUES (?, ?, ?, ?, ?)",
+        [id, billId, date, amount, how],
+      );
+    } catch (e) {
+      /* The mode column arrives with db/credit-payment-mode.sql. Until it has
+         been run, keep recording repayments the way they always were. */
+      if ((e as { code?: string }).code !== "ER_BAD_FIELD_ERROR") throw e;
+      await db().execute(
+        "INSERT INTO bill_credit_payments (id, bill_id, paid_on, amount) VALUES (?, ?, ?, ?)",
+        [id, billId, date, amount],
+      );
+    }
 
     if (bill) {
       const owed = Number(bill.owed);

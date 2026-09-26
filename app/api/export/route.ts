@@ -81,6 +81,22 @@ export async function GET(request: Request) {
           r.bought_on, r.supplier, r.item, r.amount, r.paid, r.balance,
         ]),
       );
+    } else if (type === "closings") {
+      let rows: Record<string, unknown>[] = [];
+      try {
+        [rows] = (await db().query(
+          `SELECT closed_on, expected, counted, difference, note, closed_by
+           FROM daily_closings WHERE closed_on BETWEEN ? AND ? ORDER BY closed_on`,
+          [from, to],
+        )) as unknown as [Record<string, unknown>[]];
+      } catch (e) {
+        // No table yet means nothing has been closed: an empty sheet, not an error.
+        if ((e as { code?: string }).code !== "ER_NO_SUCH_TABLE") throw e;
+      }
+      body = csv(
+        ["Date", "Expected", "Counted", "Difference", "Note", "Closed by"],
+        rows.map((r) => [r.closed_on, r.expected, r.counted, r.difference, r.note, r.closed_by]),
+      );
     } else {
       return NextResponse.json({ error: "Unknown export" }, { status: 400 });
     }

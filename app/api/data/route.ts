@@ -15,7 +15,9 @@ export async function GET() {
     const pool = db();
     const [billRows] = await pool.query("SELECT * FROM bills ORDER BY sold_on DESC, sold_at DESC");
     const [creditPays] = await pool.query(
-      "SELECT id, bill_id AS parent_id, paid_on, amount FROM bill_credit_payments ORDER BY paid_on",
+      /* SELECT * so a database that has not had db/credit-payment-mode.sql run yet
+       still loads: the mode column simply is not there. */
+      "SELECT *, bill_id AS parent_id FROM bill_credit_payments ORDER BY paid_on",
     );
     /* Expenses go to whoever may record them, which is now staff as well as
        the owner. Gated on the same rule the write routes use, so the tab and
@@ -31,7 +33,7 @@ export async function GET() {
       "SELECT name FROM price_categories ORDER BY name",
     );
     const [purchasePays] = await pool.query(
-      "SELECT id, purchase_id AS parent_id, paid_on, amount FROM purchase_payments ORDER BY paid_on",
+      "SELECT id, purchase_id AS parent_id, paid_on, amount, created_at FROM purchase_payments ORDER BY paid_on, created_at",
     );
 
     const by = (rows: any[], key: string) => rows.filter((r) => r.parent_id === key);
