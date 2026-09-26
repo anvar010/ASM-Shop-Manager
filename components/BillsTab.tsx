@@ -8,10 +8,11 @@ import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatDMY, formatINR, groupIN } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./BillsTab.module.css";
-import { IconBackspace, IconBill, IconPencil, IconPlus, IconTrash } from "./Icons";
+import { IconBackspace, IconBill, IconChevron, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const { ask, dialog } = useConfirm();
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
@@ -571,21 +572,33 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           {/* Two halves — the day's total, and where that money sits. Stacked on
               a phone; side by side once there is width, which halves the height
               and lets the form below stay on screen. */}
-          <section className={`${s.banner} ${s.bannerPrimary} ${c.summary}`}>
-            <div className={c.summaryTotal}>
-              <div className={s.bannerLabel}>
+          <section className={`${s.banner} ${s.bannerPrimary} ${summaryOpen ? c.summary : ""} ${c.summaryCard}`}>
+            <button
+              type="button"
+              className={c.summaryHeader}
+              onClick={() => setSummaryOpen(!summaryOpen)}
+              aria-expanded={summaryOpen}
+            >
+              <span className={s.bannerLabel} style={{ fontSize: 14, fontWeight: 600 }}>
                 {shop.isTodayView
                   ? "Total collected today"
                   : `Total collected ${shop.selectedDay.long}`}
+              </span>
+              <span className={`${c.summaryChevron} ${summaryOpen ? c.summaryToggleOpen : ""}`}>
+                <IconChevron size={18} color="currentColor" />
+              </span>
+            </button>
+            {summaryOpen && (
+              <div className={c.summaryTotal}>
+                <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewTotal)}</div>
+                <div className={s.bannerLabel}>
+                  {shop.viewCount} {shop.viewCount === 1 ? "bill" : "bills"}
+                  {shop.isTodayView ? " today" : ""}
+                </div>
               </div>
-              <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewTotal)}</div>
-              <div className={s.bannerLabel}>
-                {shop.viewCount} {shop.viewCount === 1 ? "bill" : "bills"}
-                {shop.isTodayView ? " today" : ""}
-              </div>
-            </div>
-            <div className={s.bannerRule} />
-            <div className={c.summarySplit}>
+            )}
+            {summaryOpen && <div className={s.bannerRule} />}
+            {summaryOpen && <div className={c.summarySplit}>
             <div className={s.rowBetween}>
               <div className={s.bannerLabel}>Cash in drawer</div>
               <div className="num" style={{ fontSize: 20, color: "#fff" }}>
@@ -609,7 +622,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 </div>
               </div>
             )}
-            </div>
+            </div>}
           </section>
 
           {showForm && form}

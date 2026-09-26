@@ -783,8 +783,13 @@
     column-gap: 18px;
   }
 
+  .summary > button {
+    grid-column: 1 / -1;
+    margin-bottom: 8px;
+  }
+
   /* The rule turns on its side and becomes the divider between the two. */
-  .summary > div:nth-child(2) {
+  .summary > div:nth-child(3) {
     align-self: stretch;
     width: 1px;
     height: auto;
@@ -794,4 +799,34 @@
   .summarySplit {
     min-width: 0;
   }
+}
+
+/* The cash split stays closed until asked for. */
+.summaryCard {
+  position: relative;
+}
+
+.summaryHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #fff;
+  text-align: left;
+}
+
+.summaryChevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  transition: transform 0.2s ease;
+}
+
+.summaryToggleOpen {
+  transform: rotate(180deg);
 }
