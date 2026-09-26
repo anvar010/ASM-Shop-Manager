@@ -409,6 +409,59 @@
   opacity: 0.55;
 }
 
+.notifyBanner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  z-index: 29;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 10px 10px 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.notifyBannerText {
+  flex: 1;
+  min-width: 0;
+}
+
+.notifyBannerAction {
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.notifyBannerAction:disabled {
+  opacity: 0.55;
+}
+
+.notifyBannerClose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--primary-dark);
+}
+
+.notifyBannerClose:hover {
+  background: rgba(41, 82, 204, 0.12);
+}
+
 .notifyNote {
   margin-top: 10px;
   padding: 9px 10px;

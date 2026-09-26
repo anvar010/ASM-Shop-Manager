@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import styles from "./AppShell.module.css";
-import { IconBell, IconBellOff } from "./Icons";
+import { IconBell, IconBellOff, IconTimes } from "./Icons";
 
 type State = "loading" | "unsupported" | "denied" | "off" | "on" | "working";
 
@@ -23,6 +23,7 @@ function toKey(base64: string): ArrayBuffer {
  */
 function useNotifications() {
   const [state, setState] = useState<State>("loading");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -65,13 +66,21 @@ function useNotifications() {
 
   async function enable() {
     setState("working");
+    setError("");
     try {
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setState(permission === "denied" ? "denied" : "off");
         return;
       }
-      const reg = await navigator.serviceWorker.ready;
+      /* ready never settles when no worker is active (e.g. the dev server,
+         which unregisters it), so bound the wait instead of hanging. */
+      const reg = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("no service worker")), 5000),
+        ),
+      ]);
       const sub = await reg.pushManager.subscribe({
         // Web push forbids silent messages; every one shows a notification.
         userVisibleOnly: true,
@@ -82,8 +91,14 @@ function useNotifications() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub),
       });
+      if (!res.ok) setError("Could not save. Try again.");
       setState(res.ok ? "on" : "off");
-    } catch {
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message === "no service worker"
+          ? "Not available here. Use the installed app."
+          : "Could not turn on. Try again.",
+      );
       setState("off");
     }
   }
@@ -107,7 +122,55 @@ function useNotifications() {
     }
   }
 
-  return { state, toggle: () => (state === "on" ? disable() : enable()) };
+  return { state, error, toggle: () => (state === "on" ? disable() : enable()) };
+}
+
+const DISMISS_KEY = "asm-notify-banner-dismissed";
+
+/**
+ * A prompt above the tab bar while notifications are off. Closing it hides it
+ * for the rest of the session only, so it returns until notifications are on.
+ */
+export function NotificationBanner() {
+  const { state, error, toggle } = useNotifications();
+  const [dismissed, setDismissed] = useState(true);
+
+  useEffect(() => {
+    try {
+      setDismissed(sessionStorage.getItem(DISMISS_KEY) === "1");
+    } catch {
+      setDismissed(false);
+    }
+  }, []);
+
+  if (dismissed || (state !== "off" && state !== "working")) return null;
+
+  function close() {
+    setDismissed(true);
+    try {
+      sessionStorage.setItem(DISMISS_KEY, "1");
+    } catch {
+      /* Private mode: it simply comes back next load. */
+    }
+  }
+
+  return (
+    <div className={styles.notifyBanner} role="region" aria-label="Notifications">
+      <IconBell size={18} color="currentColor" />
+      <span className={styles.notifyBannerText}>{error || "Notifications are off"}</span>
+      <button
+        type="button"
+        className={styles.notifyBannerAction}
+        onClick={toggle}
+        disabled={state === "working"}
+      >
+        Turn on
+      </button>
+      <button type="button" className={styles.notifyBannerClose} onClick={close} aria-label="Dismiss">
+        <IconTimes size={14} color="currentColor" />
+      </button>
+    </div>
+  );
 }
 
 /** The bell beside the avatar. Hidden where push cannot work at all. */

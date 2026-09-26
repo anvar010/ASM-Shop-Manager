@@ -8,7 +8,7 @@ import { useShopContext, useUser } from "@/lib/shopContext";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
 import styles from "./AppShell.module.css";
-import NotificationToggle, { NotificationBell } from "./NotificationToggle";
+import NotificationToggle, { NotificationBanner, NotificationBell } from "./NotificationToggle";
 import {
   IconBill,
   IconBox,
@@ -194,6 +194,7 @@ export default function AppShell({
         </div>
       )}
 
+      {user?.role === "admin" && <NotificationBanner />}
       <nav className={styles.nav} aria-label="Main">
         {tabs.map((tab) => {
           const { id, label, Icon } = tab;
