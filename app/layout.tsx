@@ -4,6 +4,7 @@ import "./globals.css";
 import { ShopProvider } from "@/lib/shopContext";
 import { currentUser } from "@/lib/session";
 import ServiceWorker from "@/components/ServiceWorker";
+import UpdateBanner from "@/components/UpdateBanner";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -65,6 +66,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ShopProvider user={user}>{children}</ShopProvider>
         <ServiceWorker />
+        <UpdateBanner />
       </body>
     </html>
   );
