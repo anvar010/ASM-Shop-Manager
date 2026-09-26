@@ -250,6 +250,61 @@ export default function OverviewReport() {
           <div className={s.muted}>No sales in this period yet.</div>
         )}
       </section>
+
+      <ExportCard />
     </AppShell>
+  );
+}
+
+/** Downloads the book as CSV for a date range, for the accountant or a backup. */
+function ExportCard() {
+  // Local date: toISOString is UTC, which is yesterday before 5:30 AM here.
+  const now = new Date();
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  const [from, setFrom] = useState(today.slice(0, 8) + "01");
+  const [to, setTo] = useState(today);
+  const valid = from !== "" && to !== "" && from <= to;
+
+  const link = (type: string) => `/api/export?type=${type}&from=${from}&to=${to}`;
+  const KINDS = [
+    { type: "bills", label: "Bills" },
+    { type: "expenses", label: "Expenses" },
+    { type: "purchases", label: "Stock purchases" },
+  ];
+
+  return (
+    <section className={s.card} style={{ marginTop: 12 }}>
+      <div className={s.cardTitle} style={{ marginBottom: 4 }}>
+        Export
+      </div>
+      <div className={s.muted} style={{ marginBottom: 12 }}>
+        Download a spreadsheet for any date range.
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <label className={s.muted} style={{ flex: 1, minWidth: 140 }}>
+          From
+          <input className={s.input} type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+        </label>
+        <label className={s.muted} style={{ flex: 1, minWidth: 140 }}>
+          To
+          <input className={s.input} type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        </label>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {KINDS.map((k) => (
+          <a
+            key={k.type}
+            href={valid ? link(k.type) : undefined}
+            download
+            aria-disabled={!valid}
+            className={s.chip}
+            style={valid ? undefined : { opacity: 0.5, pointerEvents: "none" }}
+          >
+            {k.label}
+          </a>
+        ))}
+      </div>
+    </section>
   );
 }
