@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import BillRowEditor from "./BillRowEditor";
+import VoiceButton from "./VoiceButton";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatDMY, formatINR, groupIN } from "@/lib/format";
@@ -103,15 +104,24 @@ export default function BillsTab({ shop }: { shop: Shop }) {
 
         <div className={c.formFields}>
           {!receiving && (
-          <input
-            className={s.input}
-            type="text"
-            placeholder="What was sold? (optional)"
-            value={shop.formDesc}
-            onChange={(e) => shop.setFormDesc(e.target.value)}
-            style={{ marginBottom: 12 }}
-            aria-label="Description"
-          />
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <input
+                className={s.input}
+                type="text"
+                placeholder="What was sold? (optional)"
+                value={shop.formDesc}
+                onChange={(e) => shop.setFormDesc(e.target.value)}
+                style={{ flex: 1, minWidth: 0 }}
+                aria-label="Description"
+              />
+              <VoiceButton
+                className={s.micButton}
+                onHeard={(h) => {
+                  if (h.text) shop.setFormDesc(h.text);
+                  if (h.amount) shop.setFormAmount(h.amount);
+                }}
+              />
+            </div>
           )}
 
           {!receiving && (

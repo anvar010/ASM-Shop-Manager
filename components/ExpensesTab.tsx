@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import ExpenseRowEditor from "./ExpenseRowEditor";
+import VoiceButton from "./VoiceButton";
 import type { Shop } from "@/lib/useShop";
 import { EXPENSE_CATEGORIES, PAD_KEYS } from "@/lib/constants";
 import { formatINR, groupIN } from "@/lib/format";
@@ -165,15 +166,24 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
               aria-label="Expense amount"
             />
           </div>
-          <input
-            className={s.input}
-            type="text"
-            placeholder="What was it for? (optional)"
-            value={shop.expDesc}
-            onChange={(e) => shop.setExpDesc(e.target.value)}
-            style={{ marginBottom: 12 }}
-            aria-label="Expense description"
-          />
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 12 }}>
+            <input
+              className={s.input}
+              type="text"
+              placeholder="What was it for? (optional)"
+              value={shop.expDesc}
+              onChange={(e) => shop.setExpDesc(e.target.value)}
+              style={{ flex: 1, minWidth: 0 }}
+              aria-label="Expense description"
+            />
+            <VoiceButton
+              className={s.micButton}
+              onHeard={(h) => {
+                if (h.text) shop.setExpDesc(h.text);
+                if (h.amount) shop.setExpAmount(h.amount);
+              }}
+            />
+          </div>
           <div className={`${s.chipRow} scrollX`} style={{ marginBottom: 14 }}>
             {EXPENSE_CATEGORIES.map((cat) => {
               const active = shop.expCategory === cat.id;
