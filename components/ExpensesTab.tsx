@@ -4,17 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import ExpenseRowEditor from "./ExpenseRowEditor";
 import type { Shop } from "@/lib/useShop";
-import { EXPENSE_CATEGORIES } from "@/lib/constants";
-import { formatINR } from "@/lib/format";
+import { EXPENSE_CATEGORIES, PAD_KEYS } from "@/lib/constants";
+import { formatINR, groupIN } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./ExpensesTab.module.css";
+import pad from "./BillsTab.module.css";
 import CalendarFilter from "./CalendarFilter";
-import { IconCalendar, IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
+import { IconBackspace, IconCalendar, IconNote, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 export default function ExpensesTab({ shop }: { shop: Shop }) {
   const { ask, dialog } = useConfirm();
   const [calOpen, setCalOpen] = useState(false);
   const calRef = useRef<HTMLDivElement | null>(null);
+
+  /* The same keypad the bill form has, writing to the expense amount. */
+  function pressPad(k: string) {
+    const cur = shop.expAmount;
+    if (k === "back") return shop.setExpAmount(cur.slice(0, -1));
+    if (cur.length >= 7) return;
+    if (cur === "" && (k === "0" || k === "00")) return;
+    shop.setExpAmount(cur + k);
+  }
+  const amountDisplay = shop.expAmount === "" ? "0" : groupIN(Number(shop.expAmount));
 
   useEffect(() => {
     if (!calOpen) return;
@@ -119,7 +130,26 @@ export default function ExpensesTab({ shop }: { shop: Shop }) {
           <div className={s.cardTitle} style={{ marginBottom: 12 }}>
             Add an expense
           </div>
-          <div className={s.inputRow} style={{ marginBottom: 10 }}>
+          <div className={pad.amountDisplay}>
+            <span className="num" style={{ color: "var(--text-faint)", fontSize: 20 }}>
+              ₹
+            </span>
+            <span className={`num ${pad.amountValue}`}>{amountDisplay}</span>
+          </div>
+          <div className={pad.keypad}>
+            {PAD_KEYS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                className={pad.keyButton}
+                onClick={() => pressPad(k)}
+                aria-label={k === "back" ? "Backspace" : k}
+              >
+                {k === "back" ? <IconBackspace size={20} color="var(--text-muted)" /> : k}
+              </button>
+            ))}
+          </div>
+          <div className={`${s.inputRow} ${pad.amountField}`} style={{ marginBottom: 10 }}>
             <span className="num" style={{ color: "var(--text-muted)", fontSize: 16 }}>
               ₹
             </span>

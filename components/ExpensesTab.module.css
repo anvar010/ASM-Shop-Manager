@@ -121,7 +121,7 @@
 @media (min-width: 768px) {
   .layout {
     display: grid;
-    grid-template-columns: 340px minmax(0, 1fr);
+    grid-template-columns: 480px minmax(0, 1fr);
     gap: 20px;
     align-items: start;
   }
@@ -153,7 +153,7 @@
 
 @media (min-width: 1280px) {
   .layout {
-    grid-template-columns: 380px minmax(0, 1fr);
+    grid-template-columns: 560px minmax(0, 1fr);
   }
 }
 
