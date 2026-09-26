@@ -94,10 +94,15 @@ export default function OverviewTab({ shop }: { shop: Shop }) {
             </div>
           </div>
 
-          <div className={s.chart}>
-            {shop.chartBars.map((bar) => (
+          {/* Keyed by period so switching Today / Week / Month remounts the bars
+              and they grow in afresh, rather than snapping to the new shape. */}
+          <div key={shop.period} className={s.chart}>
+            {shop.chartBars.map((bar, i) => (
               <div key={bar.key} className={s.chartCol}>
-                <div className={s.chartBar} style={{ height: `${bar.heightPct}%` }} />
+                <div
+                  className={s.chartBar}
+                  style={{ height: `${bar.heightPct}%`, "--i": i } as React.CSSProperties}
+                />
                 <div className={s.chartLabel}>{bar.label}</div>
               </div>
             ))}

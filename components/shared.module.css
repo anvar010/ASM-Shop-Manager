@@ -238,6 +238,24 @@
   min-height: 4px;
   background: linear-gradient(180deg, var(--primary) 0%, var(--primary-light) 130%);
   border-radius: 6px 6px 2px 2px;
+  transform-origin: bottom;
+  transition: height 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: barGrow 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleY(0);
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chartBar {
+    animation: none;
+    transition: none;
+  }
 }
 
 .chartLabel {
