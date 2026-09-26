@@ -41,7 +41,7 @@ export default function AllBillsPage() {
   const due = shop.ledgerRows.reduce((sum, p) => sum + p.balance, 0);
 
   return (
-    <AppShell title="All Purchase Bills" back={{ href: "/", label: "Stock", tab: "stock" }}>
+    <AppShell title="All Purchase Bills" back={{ href: "/", label: "Supplier", tab: "stock" }}>
       <div className={s.rowBetween} style={{ marginBottom: 12 }}>
         <div className={s.sectionLabel}>All purchase bills</div>
         <div className={s.muted}>

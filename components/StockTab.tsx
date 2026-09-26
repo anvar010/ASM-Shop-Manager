@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Shop } from "@/lib/useShop";
 import { formatINR } from "@/lib/format";
+import SupplierPanel from "./SupplierPanel";
 import LoadCard from "./LoadCard";
 import s from "./shared.module.css";
 import c from "./StockTab.module.css";
+import k from "./BillsTab.module.css";
 import { IconAlert, IconBox, IconChevron, IconPlus, IconSearch } from "./Icons";
 
 function EmptyHistory({ shop }: { shop: Shop }) {
@@ -27,6 +29,11 @@ function EmptyHistory({ shop }: { shop: Shop }) {
 export default function StockTab({ shop }: { shop: Shop }) {
   const formRef = useRef<HTMLElement | null>(null);
   const [supplierOpen, setSupplierOpen] = useState(false);
+  /* One card, two jobs: a new load, or money handed to a shop. */
+  const [mode, setMode] = useState<"purchase" | "pay">("purchase");
+  const [payShop, setPayShop] = useState("");
+  const [payOpen, setPayOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
   const [openShops, setOpenShops] = useState<string[]>([]);
 
   function toggleShop(supplier: string) {
@@ -34,6 +41,18 @@ export default function StockTab({ shop }: { shop: Shop }) {
       prev.includes(supplier) ? prev.filter((x) => x !== supplier) : [...prev, supplier],
     );
   }
+
+  /* Only shops that are still owed can be paid. */
+  const payQuery = payShop.trim().toLowerCase();
+  const owingMatches = shop.supplierDues.filter(
+    (d) => payQuery === "" || d.supplier.toLowerCase().includes(payQuery),
+  );
+  const payTarget = (() => {
+    const due = shop.supplierDues.find((d) => d.supplier.toLowerCase() === payQuery);
+    const stats = shop.supplierStats.find((r) => r.supplier === due?.supplier);
+    return due && stats ? { ...due, spent: stats.spent } : null;
+  })();
+  const payTyped = parseFloat(payAmount);
 
   /* Searching or filtering is asking to see the matching loads, so those
      results open regardless of which shops were expanded by hand. */
@@ -49,7 +68,7 @@ export default function StockTab({ shop }: { shop: Shop }) {
   return (
     <div>
       <div className={s.rowBetween} style={{ marginBottom: 10 }}>
-        <div className={s.sectionLabel}>Stock Purchases</div>
+        <div className={s.sectionLabel}>Supplier Purchases</div>
         <div className={s.muted}>
           {shop.purchaseRows.length} {shop.purchaseRows.length === 1 ? "load" : "loads"}
         </div>
@@ -98,9 +117,30 @@ export default function StockTab({ shop }: { shop: Shop }) {
           </section>
 
           <section className={s.card} ref={formRef}>
-            <div className={s.cardTitle} style={{ marginBottom: 12 }}>
-              New purchase
+            <div
+              className={k.kindSwitch}
+              style={{ "--n": 2, "--i": mode === "purchase" ? 0 : 1 } as React.CSSProperties}
+            >
+              {(
+                [
+                  { id: "purchase", label: "New purchase" },
+                  { id: "pay", label: "Paid" },
+                ] as const
+              ).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`${k.kindButton} ${mode === m.id ? k.kindOn : ""}`}
+                  onClick={() => setMode(m.id)}
+                  aria-pressed={mode === m.id}
+                >
+                  {m.label}
+                </button>
+              ))}
             </div>
+
+            {mode === "purchase" ? (
+              <>
 
             <div className={s.fieldLabel}>Bought from</div>
             {/* Typing looks up shops already bought from, so a repeat load is
@@ -212,6 +252,107 @@ export default function StockTab({ shop }: { shop: Shop }) {
               <IconPlus size={16} color="#fff" />
               Add Purchase
             </button>
+              </>
+            ) : (
+              <>
+                <div className={s.fieldLabel}>Shop paid</div>
+                <div className={`${c.lookup} ${c.fieldGap}`}>
+                  <input
+                    className={s.input}
+                    type="text"
+                    placeholder="Pick or type the shop"
+                    value={payShop}
+                    onChange={(e) => {
+                      setPayShop(e.target.value);
+                      setPayOpen(true);
+                    }}
+                    onFocus={() => setPayOpen(true)}
+                    onBlur={() => setPayOpen(false)}
+                    onKeyDown={(e) => e.key === "Escape" && setPayOpen(false)}
+                    aria-label="Shop paid"
+                    autoComplete="off"
+                  />
+                  {payOpen && owingMatches.length > 0 && (
+                    <div className={c.lookupList} role="listbox">
+                      {owingMatches.map((m) => (
+                        <button
+                          key={m.supplier}
+                          type="button"
+                          className={c.lookupItem}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setPayShop(m.supplier);
+                            setPayOpen(false);
+                          }}
+                        >
+                          <span className={`${s.truncate} ${c.lookupName}`}>{m.supplier}</span>
+                          <span className={c.lookupMeta}>{m.balanceLabel} due</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {payTarget ? (
+                  <div className={c.matchNote}>
+                    <div className={c.payFigures}>
+                      <div>
+                        <div className={`num ${c.payFigure}`}>{formatINR(payTarget.spent)}</div>
+                        <div className={c.payFigureLabel}>Total</div>
+                      </div>
+                      <div>
+                        <div className={`num ${c.payFigure}`} style={{ color: "var(--success)" }}>
+                          {formatINR(payTarget.spent - payTarget.balance)}
+                        </div>
+                        <div className={c.payFigureLabel}>Already paid</div>
+                      </div>
+                      <div>
+                        <div className={`num ${c.payFigure}`} style={{ color: "var(--warning)" }}>
+                          {payTarget.balanceLabel}
+                        </div>
+                        <div className={c.payFigureLabel}>Balance</div>
+                      </div>
+                    </div>
+                    <div style={{ marginTop: 8 }}>
+                      {payTarget.loads} unpaid {payTarget.loads === 1 ? "load" : "loads"}. The
+                      payment comes off the oldest load first.
+                    </div>
+                  </div>
+                ) : payShop.trim() !== "" ? (
+                  <div className={c.newNote}>No unpaid balance for a shop with that name.</div>
+                ) : null}
+
+                <div className={s.fieldLabel} style={{ marginTop: 12 }}>
+                  Amount paid
+                </div>
+                <input
+                  className={`num ${s.input}`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  placeholder="0"
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  style={{ marginBottom: 14 }}
+                  aria-label="Amount paid"
+                />
+
+                <button
+                  type="button"
+                  className={s.primaryButton}
+                  disabled={!payTarget || !(payTyped > 0)}
+                  style={!payTarget || !(payTyped > 0) ? { opacity: 0.5 } : undefined}
+                  onClick={() => {
+                    if (payTarget && shop.paySupplier(payTarget.supplier, payTyped) > 0) {
+                      setPayAmount("");
+                    }
+                  }}
+                >
+                  <IconPlus size={16} color="#fff" />
+                  Record payment{payTarget && payTyped > 0 ? ` · ${formatINR(Math.min(payTyped, payTarget.balance))}` : ""}
+                </button>
+              </>
+            )}
           </section>
         </div>
 
@@ -299,6 +440,7 @@ export default function StockTab({ shop }: { shop: Shop }) {
 
                       {open && (
                         <div className={c.shopLoads}>
+                          <SupplierPanel shop={shop} g={g} />
                           {g.rows.map((p) => (
                             <LoadCard key={p.id} shop={shop} p={p} />
                           ))}

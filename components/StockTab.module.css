@@ -312,3 +312,22 @@
     align-items: start;
   }
 }
+
+/* Total, already paid and balance for the shop chosen on the Paid form. */
+.payFigures {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.payFigure {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.payFigureLabel {
+  margin-top: 1px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

@@ -27,7 +27,7 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       { name: "Add a bill", url: "/" },
-      { name: "Stock purchases", url: "/purchases" },
+      { name: "Supplier purchases", url: "/purchases" },
       { name: "Credit customers", url: "/credits" },
     ],
   };

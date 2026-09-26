@@ -63,6 +63,10 @@ export interface PurchasePayment {
   /** YYYY-MM-DD */
   date: string;
   amount: number;
+  /** When it was recorded, as an ISO timestamp. Absent on old rows. */
+  at?: string;
+  /** Credit repayments only: how the customer paid. Missing means cash. */
+  mode?: "cash" | "upi";
 }
 
 /** One load of goods taken from a wholesaler, and what has been paid for it. */
@@ -78,6 +82,8 @@ export interface Purchase {
   paidUpfront: number;
   /** later part-payments against this purchase, oldest first */
   payments: PurchasePayment[];
+  /** When the load was recorded, as an ISO timestamp. */
+  addedAt?: string;
 }
 
 export interface DayOption {

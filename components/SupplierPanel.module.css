@@ -1,0 +1,130 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.payBox {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--warning-bg);
+}
+
+.payTitle {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.payDue {
+  font-weight: 600;
+  color: var(--warning);
+}
+
+.payRow {
+  display: flex;
+  gap: 8px;
+}
+
+.payInput {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 15px;
+}
+
+.payButton {
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.payButton:disabled {
+  opacity: 0.45;
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.historyToggle {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.event {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.event:last-child {
+  border-bottom: none;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.dotBought {
+  background: var(--warning);
+}
+
+.dotPaid {
+  background: var(--success);
+}
+
+.eventBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.eventLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.eventWhen {
+  margin-top: 1px;
+  font-size: 11px;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+
+.eventFigures {
+  text-align: right;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.eventBalance {
+  font-size: 10.5px;
+  color: var(--text-faint);
+  font-weight: 600;
+}

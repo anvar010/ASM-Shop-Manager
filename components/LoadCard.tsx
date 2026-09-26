@@ -5,6 +5,7 @@ import type { Shop } from "@/lib/useShop";
 import { formatINR } from "@/lib/format";
 import s from "./shared.module.css";
 import l from "./LoadCard.module.css";
+import { useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import { IconPencil, IconPlus, IconTrash } from "./Icons";
 
@@ -30,8 +31,10 @@ export default function LoadCard({
   const router = useRouter();
   const pathname = usePathname();
   const { ask, dialog } = useConfirm();
+  const [editingPay, setEditingPay] = useState<string | null>(null);
+  const [payEdit, setPayEdit] = useState("");
 
-  /* Buy-again fills the new-purchase form, which lives on the Stock tab, so
+  /* Buy-again fills the new-purchase form, which lives on the Supplier tab, so
      from anywhere else it loads the form and then takes you to it. Editing
      stays here on the card. */
   function buyAgain() {
@@ -150,8 +153,72 @@ export default function LoadCard({
         <div className={l.payLog}>
           {p.payLog.map((pay) => (
             <div key={pay.id} className={l.payLogRow}>
-              <span>Paid {pay.dayLabel}</span>
-              <span className="num">−{pay.amountLabel}</span>
+              {editingPay === pay.id ? (
+                <>
+                  <input
+                    className={`num ${l.payInput}`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    value={payEdit}
+                    onChange={(e) => setPayEdit(e.target.value)}
+                    aria-label="Corrected payment amount"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    className={l.payConfirm}
+                    disabled={!(parseFloat(payEdit) > 0)}
+                    onClick={() => {
+                      if (shop.editPurchasePayment(p.id, pay.id, parseFloat(payEdit))) {
+                        setEditingPay(null);
+                      }
+                    }}
+                  >
+                    Save
+                  </button>
+                  <button type="button" className={l.payCancel} onClick={() => setEditingPay(null)}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+              <>
+              <span>
+                Paid {pay.dayLabel}
+                {pay.at
+                  ? `, ${new Date(pay.at)
+                      .toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true })
+                      .toUpperCase()}`
+                  : ""}
+              </span>
+              <span className="num" style={{ marginLeft: "auto" }}>−{pay.amountLabel}</span>
+              <button
+                type="button"
+                className={l.payLogAction}
+                aria-label={`Edit the ${pay.amountLabel} payment`}
+                onClick={() => {
+                  setEditingPay(pay.id);
+                  setPayEdit(String(pay.amount));
+                }}
+              >
+                <IconPencil size={12} color="var(--text-muted)" />
+              </button>
+              <button
+                type="button"
+                className={l.payLogAction}
+                aria-label={`Delete the ${pay.amountLabel} payment`}
+                onClick={() =>
+                  ask({
+                    title: "Delete this payment?",
+                    detail: `${pay.amountLabel} paid to ${p.supplier} on ${pay.dayLabel}. The balance owed goes back up by that amount.`,
+                    onConfirm: () => shop.deletePurchasePayment(p.id, pay.id),
+                  })
+                }
+              >
+                <IconTrash size={12} color="var(--danger)" />
+              </button>
+              </>
+              )}
             </div>
           ))}
         </div>

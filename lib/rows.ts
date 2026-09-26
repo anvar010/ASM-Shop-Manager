@@ -34,7 +34,19 @@ type BillRow = {
   customer: string | null;
 };
 
-type PaymentRow = { id: string; parent_id: string; paid_on: string; amount: number };
+type PaymentRow = {
+  id: string;
+  parent_id: string;
+  paid_on: string;
+  amount: number;
+  created_at?: string;
+  mode?: string;
+};
+
+/** MySQL gives UTC as "YYYY-MM-DD HH:MM:SS"; the app carries ISO. */
+export function isoFromSql(ts?: string): string | undefined {
+  return ts ? ts.replace(" ", "T") + "Z" : undefined;
+}
 
 export function toBill(row: BillRow, payments: PaymentRow[]): Bill {
   const bill: Bill = {
@@ -80,6 +92,7 @@ type PurchaseRow = {
   item: string;
   amount: number;
   paid_upfront: number;
+  created_at?: string;
 };
 
 export function toPurchase(row: PurchaseRow, payments: PaymentRow[]): Purchase {
@@ -91,9 +104,17 @@ export function toPurchase(row: PurchaseRow, payments: PaymentRow[]): Purchase {
     amount: row.amount,
     paidUpfront: row.paid_upfront,
     payments: payments.map(toPayment),
+    addedAt: isoFromSql(row.created_at),
   };
 }
 
 function toPayment(row: PaymentRow): PurchasePayment {
-  return { id: row.id, date: row.paid_on, amount: row.amount };
+  return {
+    id: row.id,
+    date: row.paid_on,
+    amount: row.amount,
+    at: isoFromSql(row.created_at),
+    // Purchase payments have no mode; a credit repayment before the column existed is cash.
+    ...(row.mode === "upi" || row.mode === "cash" ? { mode: row.mode } : {}),
+  };
 }

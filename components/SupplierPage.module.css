@@ -1,0 +1,79 @@
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.loads {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 16px;
+  }
+}
+
+.shopBadge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(242, 200, 121, 0.16);
+  color: var(--accent-gold-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.shopName {
+  margin: 6px 0 2px;
+  color: var(--accent-gold-soft);
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 768px) {
+  .shopName {
+    font-size: 40px;
+  }
+}
+
+/* Name on the left, what is owed on the right, so the card stays short. */
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.headName {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.headAmount {
+  text-align: right;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.headAmount > div:first-child {
+  margin: 0;
+}
