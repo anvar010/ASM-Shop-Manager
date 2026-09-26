@@ -143,6 +143,10 @@
 }
 
 .key {
+  /* No double-tap-to-zoom wait, and no grey flash on touch. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
   height: 56px;
   display: flex;
   align-items: center;

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import BillRowEditor from "./BillRowEditor";
 import VoiceButton from "./VoiceButton";
+import DayClosing from "./DayClosing";
+import { useUser } from "@/lib/shopContext";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatDMY, formatINR, groupIN } from "@/lib/format";
@@ -11,9 +13,15 @@ import s from "./shared.module.css";
 import c from "./BillsTab.module.css";
 import { IconBackspace, IconBill, IconChevron, IconPencil, IconPlus, IconTrash } from "./Icons";
 
+/** The keypad amount as a number; empty or unfinished reads as zero. */
+function typedAmountRaw(text: string): number {
+  return parseFloat(text) || 0;
+}
+
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const isOwner = useUser()?.role === "admin";
   const { ask, dialog } = useConfirm();
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
@@ -21,7 +29,23 @@ export default function BillsTab({ shop }: { shop: Shop }) {
   /* The same keypad and name field serve two jobs: writing a sale, and taking
      money back against one already given on credit. */
   const receiving = shop.formKind === "received";
-  const typedAmount = parseFloat(shop.formAmount) || 0;
+  const paying = shop.formKind === "supplier";
+  const sale = shop.formKind === "sale";
+
+  /* Dealing with a wholesaler from the counter: pick the shop, use the same
+     keypad, and say whether the amount is goods taken or money paid. */
+  const [supplierName, setSupplierName] = useState("");
+  const [supplierItem, setSupplierItem] = useState("");
+  const [supplierOpen, setSupplierOpen] = useState(false);
+  const supplierQuery = supplierName.trim().toLowerCase();
+  const supplierList = shop.supplierStats.filter(
+    (d) => supplierQuery === "" || d.supplier.toLowerCase().includes(supplierQuery),
+  );
+  const supplierKnown = shop.supplierStats.find((r) => r.supplier.toLowerCase() === supplierQuery);
+  const supplierOwed = supplierKnown?.balance ?? 0;
+  const supplierPay = Math.min(typedAmountRaw(shop.formAmount), supplierOwed);
+  const supplierAmount = typedAmountRaw(shop.formAmount);
+  const typedAmount = typedAmountRaw(shop.formAmount);
   const target = shop.receiveTarget;
   const owed = target?.owed ?? 0;
   const applied = Math.min(typedAmount, owed);
@@ -37,13 +61,21 @@ export default function BillsTab({ shop }: { shop: Shop }) {
   const form = (
     <section className={s.card}>
       <div className={s.cardTitle} style={{ marginBottom: 12 }}>
-        {receiving ? "Money received" : "Add a bill"}
+        {receiving ? "Money received" : paying ? "Supplier" : "Add a bill"}
       </div>
 
-      <div className={c.kindSwitch}>
+      <div
+        className={c.kindSwitch}
+        style={
+          {
+            "--i": ["sale", "received", "supplier"].indexOf(shop.formKind),
+          } as React.CSSProperties
+        }
+      >
         {([
           { id: "sale", label: "New sale" },
           { id: "received", label: "Received" },
+          { id: "supplier", label: "Supplier" },
         ] as const).map((k) => (
           <button
             key={k.id}
@@ -60,7 +92,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
       <div className={c.formGrid}>
         <div>
           {/* Keypad path (tablet and desktop) */}
-          <div className={c.amountDisplay}>
+          <div key={shop.padBlocked} className={`${c.amountDisplay} ${shop.padBlocked > 0 ? c.padBlocked : ""}`}>
             <span
               className="num"
               style={{ color: "var(--text-faint)", fontSize: 20 }}
@@ -102,8 +134,8 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           </div>
         </div>
 
-        <div className={c.formFields}>
-          {!receiving && (
+        <div key={shop.formKind} className={`${c.formFields} ${c.kindPanel}`}>
+          {sale && (
             <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <input
                 className={s.input}
@@ -124,7 +156,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           )}
 
-          {!receiving && (
+          {sale && (
           <div className={c.catChips}>
             {CATEGORIES.map((cat) => {
               const active = shop.formCategory === cat.id;
@@ -145,8 +177,8 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           </div>
           )}
 
-          {!receiving && <div className={s.fieldLabel}>Paid by</div>}
-          {!receiving && (
+          {sale && <div className={s.fieldLabel}>Paid by</div>}
+          {sale && (
           <div className={c.modeGrid}>
             {PAYMENT_MODES.map((m) => {
               const active = shop.formMode === m.id;
@@ -168,7 +200,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
 
           {/* Typing looks up people who already have a tab, so a repeat credit
               sale joins their existing one instead of starting a second. */}
-          {!receiving && shop.formMode === "credit" && (
+          {sale && shop.formMode === "credit" && (
             <div style={{ marginBottom: 14 }}>
               <div className={c.lookup}>
                 <input
@@ -269,6 +301,26 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           )}
 
+          {receiving && <div className={s.fieldLabel}>Received by</div>}
+          {receiving && (
+            <div className={c.modeGrid} style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+              {PAYMENT_MODES.filter((m) => m.id !== "credit").map((m) => {
+                const active = shop.receivedMode === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className={c.modeButton}
+                    style={active ? { background: m.color, color: "#fff" } : undefined}
+                    onClick={() => shop.setReceivedMode(m.id as "cash" | "upi")}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {receiving && (
             <div style={{ marginBottom: 14 }}>
               <div className={s.fieldLabel}>Received from</div>
@@ -361,7 +413,118 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           )}
 
-          {receiving ? (
+          {paying && (
+            <div style={{ marginBottom: 14 }}>
+              <div className={s.fieldLabel}>Shop</div>
+              <div className={c.lookup}>
+                <input
+                  className={s.input}
+                  type="text"
+                  placeholder="Pick a shop or type a new one"
+                  value={supplierName}
+                  onChange={(e) => {
+                    setSupplierName(e.target.value);
+                    setSupplierOpen(true);
+                  }}
+                  onFocus={() => setSupplierOpen(true)}
+                  onBlur={() => setSupplierOpen(false)}
+                  onKeyDown={(e) => e.key === "Escape" && setSupplierOpen(false)}
+                  aria-label="Shop"
+                  autoComplete="off"
+                />
+                {supplierOpen && supplierList.length > 0 && (
+                  <div className={c.lookupList} role="listbox">
+                    {supplierList.map((m) => (
+                      <button
+                        key={m.supplier}
+                        type="button"
+                        className={c.lookupItem}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setSupplierName(m.supplier);
+                          setSupplierOpen(false);
+                        }}
+                      >
+                        <span className={`${s.truncate} ${c.lookupName}`}>{m.supplier}</span>
+                        <span className={c.lookupMeta}>
+                          {m.balance > 0 ? `${m.balanceLabel} due` : "all settled"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {supplierKnown ? (
+                <div className={c.receiveNote}>
+                  <div className={s.rowBetween}>
+                    <span>
+                      <strong>{supplierKnown.supplier}</strong> is owed
+                    </span>
+                    <span className="num">{supplierKnown.balanceLabel}</span>
+                  </div>
+                  {supplierOwed > 0 && supplierAmount !== supplierOwed && (
+                    <button
+                      type="button"
+                      className={c.receiveAll}
+                      onClick={() => shop.setFormAmount(String(supplierOwed))}
+                    >
+                      Pay all {supplierKnown.balanceLabel}
+                    </button>
+                  )}
+                </div>
+              ) : supplierName.trim() !== "" ? (
+                <div className={c.newNote}>
+                  New shop — <strong>{supplierName.trim()}</strong> will be added when you tap
+                  Bought.
+                </div>
+              ) : null}
+
+              <div className={s.fieldLabel} style={{ marginTop: 12 }}>
+                What was bought (optional)
+              </div>
+              <input
+                className={s.input}
+                type="text"
+                placeholder="e.g. Milk crates x20"
+                value={supplierItem}
+                onChange={(e) => setSupplierItem(e.target.value)}
+                aria-label="What was bought"
+                autoComplete="off"
+              />
+            </div>
+          )}
+
+          {paying ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button
+                type="button"
+                className={s.primaryButton}
+                disabled={supplierName.trim() === "" || supplierAmount <= 0}
+                onClick={() => {
+                  if (shop.buyFromSupplier(supplierName, supplierItem, supplierAmount)) {
+                    shop.setFormAmount("");
+                    setSupplierItem("");
+                  }
+                }}
+              >
+                Bought {supplierAmount > 0 ? formatINR(supplierAmount) : ""}
+              </button>
+              <button
+                type="button"
+                className={s.primaryButton}
+                style={{ background: "var(--success)" }}
+                disabled={!supplierKnown || supplierOwed <= 0 || supplierAmount <= 0}
+                onClick={() => {
+                  if (supplierKnown && shop.paySupplier(supplierKnown.supplier, supplierPay) > 0) {
+                    shop.setFormAmount("");
+                  }
+                }}
+              >
+                Paid {supplierAmount > 0 && supplierOwed > 0 ? formatINR(supplierPay) : ""}
+              </button>
+            </div>
+          ) : receiving ? (
             <button
               type="button"
               className={s.primaryButton}
@@ -388,7 +551,38 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         How it was paid
       </div>
       <div className={s.stack}>
-        {shop.paymentSplit.map((m) => (
+        {[
+          ...shop.paymentSplit.map((m) => ({
+            id: m.id as string,
+            label: m.label,
+            note: m.note,
+            color: m.color,
+            amountLabel: m.amountLabel,
+            amount: Number(m.amountLabel.replace(/[^0-9.]/g, "")),
+          })),
+          {
+            id: "received",
+            label: "Received",
+            note:
+              shop.viewReceived.total > 0
+                ? `Old credit paid back · Cash ${formatINR(shop.viewReceived.cash)} · UPI ${formatINR(shop.viewReceived.upi)}`
+                : "Old credit paid back",
+            color: "#7A4BC7",
+            amountLabel: formatINR(shop.viewReceived.total),
+            amount: shop.viewReceived.total,
+          },
+          {
+            id: "expense",
+            label: "Expense",
+            note: "Paid out of the shop",
+            color: "var(--danger)",
+            amountLabel: formatINR(shop.viewExpensesPaid),
+            amount: shop.viewExpensesPaid,
+          },
+        ].map((m) => ({
+          ...m,
+          pct: shop.viewCollected > 0 ? Math.min(100, Math.round((m.amount / shop.viewCollected) * 100)) : 0,
+        })).map((m) => (
           <div key={m.id}>
             <div className={s.rowBetween} style={{ marginBottom: 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -520,7 +714,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
               {shop.isTodayView ? "Closing total" : "Day total"}
             </div>
             <div className="num" style={{ fontSize: 24, color: "var(--primary-dark)" }}>
-              {formatINR(shop.viewTotal)}
+              {formatINR(shop.viewCollected)}
             </div>
           </div>
         </>
@@ -600,7 +794,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </button>
             {summaryOpen && (
               <div className={c.summaryTotal}>
-                <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewTotal)}</div>
+                <div className={`num ${s.bannerValue}`}>{formatINR(shop.viewCollected)}</div>
                 <div className={s.bannerLabel}>
                   {shop.viewCount} {shop.viewCount === 1 ? "bill" : "bills"}
                   {shop.isTodayView ? " today" : ""}
@@ -617,10 +811,12 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
             {/* Show the working, so a drawer smaller than the day's cash sales
                 reads as money spent rather than money missing. */}
-            {shop.viewExpensesPaid > 0 && (
+            {(shop.viewOpening > 0 || shop.viewExpensesPaid > 0 || shop.viewReceived.cash > 0) && (
               <div className={s.rowBetween} style={{ marginTop: 4 }}>
                 <div className={s.bannerLabel}>
-                  {formatINR(shop.viewCashSales)} cash in, {formatINR(shop.viewExpensesPaid)} spent
+                  {shop.viewOpening > 0 ? `${formatINR(shop.viewOpening)} from yesterday + ` : ""}
+                  {formatINR(shop.viewCashSales + shop.viewReceived.cash)} cash in,{" "}
+                  {formatINR(shop.viewExpensesPaid)} spent
                 </div>
               </div>
             )}
@@ -636,6 +832,9 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           </section>
 
           {showForm && form}
+
+          {/* Below the entry form, so it is at hand without opening the summary. */}
+          {isOwner && <DayClosing shop={shop} light />}
         </div>
 
         <div className={c.rightCol} style={{ display: "flex", flexDirection: "column", gap: 12 }}>

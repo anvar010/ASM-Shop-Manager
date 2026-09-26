@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CATEGORIES,
   categoryMeta,
@@ -19,6 +19,7 @@ import {
   setApiErrorHandler,
   setDesyncHandler,
 } from "./api";
+import { loadOpening, onClosingsChanged } from "./closings";
 import { calendarKey, dateKeyOf, dayBack, dayOptions, todayKey } from "./seed";
 import type {
   Bill,
@@ -82,6 +83,8 @@ export function useShop(signedIn: boolean) {
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState<CategoryId>("groceries");
   const [formMode, setFormMode] = useState<PaymentModeId>("cash");
+  /* How money coming back against a tab is being taken. */
+  const [receivedMode, setReceivedMode] = useState<"cash" | "upi">("cash");
   const [formCustomer, setFormCustomer] = useState("");
   /** Set while the bill form is changing an existing sale rather than adding one. */
   const [editingBillId, setEditingBillId] = useState<string | null>(null);
@@ -131,7 +134,7 @@ export function useShop(signedIn: boolean) {
   const [settleAmount, setSettleAmount] = useState("");
   /* The bill form does two jobs: entering a sale, and taking money back
      against one already given on credit. */
-  const [formKind, setFormKind] = useState<"sale" | "received">("sale");
+  const [formKind, setFormKind] = useState<"sale" | "received" | "supplier">("sale");
   const [purchaseSupplier, setPurchaseSupplier] = useState("");
   const [purchaseItem, setPurchaseItem] = useState("");
   const [purchaseAmount, setPurchaseAmount] = useState("");
@@ -158,6 +161,28 @@ export function useShop(signedIn: boolean) {
     setCategories(data.categories ?? []);
     return true;
   }, []);
+
+  /*
+   * Cash already in the drawer when a day starts, carried over from the last
+   * closing. Without it the drawer would restart from zero every morning and
+   * the end-of-day count could never match. Kept per day: the viewed day and
+   * today may differ.
+   */
+  const [openings, setOpenings] = useState<Record<string, number>>({});
+  const [openingNonce, setOpeningNonce] = useState(0);
+  useEffect(() => onClosingsChanged(() => setOpeningNonce((n) => n + 1)), []);
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    [...new Set([selectedDate, today])].forEach((d) => {
+      loadOpening(d).then((v) => {
+        if (live && v !== null) setOpenings((prev) => (prev[d] === v ? prev : { ...prev, [d]: v }));
+      });
+    });
+    return () => {
+      live = false;
+    };
+  }, [signedIn, selectedDate, today, openingNonce]);
 
   /** Re-read the ledger in the background, leaving the screen up meanwhile. */
   const refresh = useCallback(() => loadLedger(true).then(applyLedger), [applyLedger]);
@@ -445,12 +470,36 @@ export function useShop(signedIn: boolean) {
     () => expenses.reduce((s, e) => (e.date === selectedDate ? s + e.amount : s), 0),
     [expenses, selectedDate],
   );
-  const cashInDrawer = viewCashSales - viewExpensesPaid;
+  /*
+   * Money customers paid back against their tabs, counted on the day it came
+   * in — not the day the credit was given. A ₹100 tab from Friday repaid on
+   * Monday is Monday's collection.
+   */
+  const receivedOn = useCallback(
+    (date: string) => {
+      let cash = 0;
+      let upi = 0;
+      bills.forEach((b) =>
+        (b.creditPayments ?? []).forEach((p) => {
+          if (p.date !== date) return;
+          if (p.mode === "upi") upi += p.amount;
+          else cash += p.amount;
+        }),
+      );
+      return { cash, upi, total: cash + upi };
+    },
+    [bills],
+  );
+  const viewReceived = useMemo(() => receivedOn(selectedDate), [receivedOn, selectedDate]);
+  const todayReceived = useMemo(() => receivedOn(today), [receivedOn, today]);
+
+  const viewOpening = openings[selectedDate] ?? 0;
+  const cashInDrawer = viewOpening + viewCashSales + viewReceived.cash - viewExpensesPaid;
   const todayCashSales = useMemo(
     () => todaysBills.reduce((s, b) => (b.mode === "cash" ? s + b.amount : s), 0),
     [todaysBills],
   );
-  const todayCash = todayCashSales - expenseTotal;
+  const todayCash = (openings[today] ?? 0) + todayCashSales + todayReceived.cash - expenseTotal;
 
   /* Credit is billed but not collected, so it is tracked apart from the drawer. */
   const creditTotal = useMemo(
@@ -938,7 +987,16 @@ export function useShop(signedIn: boolean) {
       DAY_OPTIONS.map((d) => ({
         ...d,
         active: selectedDate === d.key,
-        totalLabel: formatINR(bills.reduce((s, b) => (b.date === d.key ? s + b.amount : s), 0)),
+        // What came in that day: its sales, plus old credit paid back on it.
+        totalLabel: formatINR(
+          bills.reduce(
+            (s, b) =>
+              s +
+              (b.date === d.key ? b.amount : 0) +
+              (b.creditPayments ?? []).reduce((t, p) => (p.date === d.key ? t + p.amount : t), 0),
+            0,
+          ),
+        ),
       })),
     [bills, selectedDate],
   );
@@ -947,14 +1005,26 @@ export function useShop(signedIn: boolean) {
    * Actions
    * ---------------------------------------------------------------- */
 
-  const pressPad = useCallback((k: string) => {
-    setFormAmount((cur) => {
-      if (k === "back") return cur.slice(0, -1);
-      if (cur.length >= 7) return cur;
-      if (cur === "" && (k === "0" || k === "00")) return cur;
-      return cur + k;
-    });
-  }, []);
+  /* A sale stops at seven digits, which catches a slipped finger; paying a
+     wholesaler can run to lakhs and needs more room. Hitting the limit is
+     signalled, since a key that silently does nothing looks broken. */
+  const amountRef = useRef("");
+  amountRef.current = formAmount;
+  const [padBlocked, setPadBlocked] = useState(0);
+  const pressPad = useCallback(
+    (k: string) => {
+      if (k !== "back" && amountRef.current.length >= (formKind === "sale" ? 7 : 9)) {
+        setPadBlocked((n) => n + 1);
+        return;
+      }
+      setFormAmount((cur) => {
+        if (k === "back") return cur.slice(0, -1);
+        if (cur === "" && (k === "0" || k === "00")) return cur;
+        return cur + k;
+      });
+    },
+    [formKind],
+  );
 
   const resetBillForm = useCallback(() => {
     setEditingBillId(null);
@@ -1139,6 +1209,7 @@ export function useShop(signedIn: boolean) {
       // Paying more than the goods are worth would read as a negative balance.
       paidUpfront: Math.min(paid, amt),
       payments: [],
+      addedAt: new Date().toISOString(),
     };
     setPurchases((prev) => [purchase, ...prev]);
     api.addPurchase(purchase);
@@ -1318,7 +1389,7 @@ export function useShop(signedIn: boolean) {
    * balance is left alone rather than parked as a credit the shop then owes.
    */
   const receiveFrom = useCallback(
-    (customer: string, amount: number, date: string) => {
+    (customer: string, amount: number, date: string, mode: "cash" | "upi" = "cash") => {
       const name = customer.trim().toLowerCase();
       if (!name || !(amount > 0)) return 0;
 
@@ -1342,11 +1413,11 @@ export function useShop(signedIn: boolean) {
          setState updater runs twice under StrictMode, which once turned a
          ₹200 repayment into ₹400. */
       let left = Math.round(amount * 100);
-      const pays: { billId: string; id: string; date: string; amount: number }[] = [];
+      const pays: { billId: string; id: string; date: string; amount: number; mode: "cash" | "upi" }[] = [];
       for (const { bill, owed } of owing) {
         if (left <= 0) break;
         const take = Math.min(left, Math.round(owed * 100));
-        pays.push({ billId: bill.id, id: newId("cp"), date, amount: take / 100 });
+        pays.push({ billId: bill.id, id: newId("cp"), date, amount: take / 100, mode });
         left -= take;
       }
       if (pays.length === 0) return 0;
@@ -1422,13 +1493,126 @@ export function useShop(signedIn: boolean) {
       const take = Math.min(amount, owed);
       if (take <= 0) return;
 
-      const payment = { id: newId("wp"), date: today, amount: take };
+      const payment = { id: newId("wp"), date: today, amount: take, at: new Date().toISOString() };
       setPurchases((prev) =>
         prev.map((p) => (p.id === id ? { ...p, payments: [...p.payments, payment] } : p)),
       );
       api.payPurchase({ ...payment, purchaseId: id });
       setPayingId(null);
       setPayAmount("");
+    },
+    [purchases, today],
+  );
+
+  /**
+   * Records goods taken from a shop, all of it still owed. Used from the Bills
+   * tab, where the amount comes off the keypad; what is paid is a separate
+   * payment, so each shows in the shop's history with its own time.
+   */
+  const buyFromSupplier = useCallback(
+    (supplier: string, item: string, amount: number): boolean => {
+      const typed = supplier.trim();
+      if (!typed || !(amount > 0)) return false;
+      const known = supplierStats.find((r) => r.supplier.toLowerCase() === typed.toLowerCase());
+      const purchase: Purchase = {
+        id: newId("w"),
+        date: today,
+        supplier: known ? known.supplier : typed,
+        item: item.trim() || "Stock",
+        amount,
+        paidUpfront: 0,
+        payments: [],
+        addedAt: new Date().toISOString(),
+      };
+      setPurchases((prev) => [purchase, ...prev]);
+      api.addPurchase(purchase);
+      return true;
+    },
+    [supplierStats, today],
+  );
+
+  /** Corrects a payment's amount, never taking a load past what it is worth. */
+  const editPurchasePayment = useCallback(
+    (purchaseId: string, paymentId: string, amount: number): boolean => {
+      const purchase = purchases.find((p) => p.id === purchaseId);
+      const pay = purchase?.payments.find((x) => x.id === paymentId);
+      if (!purchase || !pay || !(amount > 0)) return false;
+      const others =
+        purchase.paidUpfront +
+        purchase.payments.reduce((sum, x) => (x.id === paymentId ? sum : sum + x.amount), 0);
+      if (others + amount > purchase.amount + 0.001) return false;
+
+      setPurchases((prev) =>
+        prev.map((p) =>
+          p.id === purchaseId
+            ? { ...p, payments: p.payments.map((x) => (x.id === paymentId ? { ...x, amount } : x)) }
+            : p,
+        ),
+      );
+      api.updatePurchasePayment({ id: paymentId, amount });
+      return true;
+    },
+    [purchases],
+  );
+
+  const deletePurchasePayment = useCallback((purchaseId: string, paymentId: string) => {
+    setPurchases((prev) =>
+      prev.map((p) =>
+        p.id === purchaseId ? { ...p, payments: p.payments.filter((x) => x.id !== paymentId) } : p,
+      ),
+    );
+    api.deletePurchasePayment(paymentId);
+  }, []);
+
+  /**
+   * Pays a shop as a whole: the amount is taken off its oldest unpaid loads
+   * first, each recorded as its own payment so every load keeps its trail.
+   * Never pays more than the shop is owed.
+   */
+  const paySupplier = useCallback(
+    (supplier: string, amount: number) => {
+      if (!amount || amount <= 0) return 0;
+      const owing = purchases
+        .filter((p) => p.supplier === supplier)
+        .map((p) => ({
+          p,
+          owed: Math.max(
+            0,
+            p.amount - p.paidUpfront - p.payments.reduce((s2, x) => s2 + x.amount, 0),
+          ),
+        }))
+        .filter((x) => x.owed > 0)
+        .sort((a, b) =>
+          a.p.date === b.p.date
+            ? (a.p.addedAt ?? "") < (b.p.addedAt ?? "")
+              ? -1
+              : 1
+            : a.p.date < b.p.date
+              ? -1
+              : 1,
+        );
+
+      let left = amount;
+      const made: { purchaseId: string; payment: { id: string; date: string; amount: number; at: string } }[] = [];
+      for (const { p, owed } of owing) {
+        if (left <= 0) break;
+        const take = Math.min(left, owed);
+        left = Math.round((left - take) * 100) / 100;
+        made.push({
+          purchaseId: p.id,
+          payment: { id: newId("wp"), date: today, amount: take, at: new Date().toISOString() },
+        });
+      }
+      if (made.length === 0) return 0;
+
+      setPurchases((prev) =>
+        prev.map((p) => {
+          const mine = made.filter((m) => m.purchaseId === p.id);
+          return mine.length ? { ...p, payments: [...p.payments, ...mine.map((m) => m.payment)] } : p;
+        }),
+      );
+      made.forEach((m) => api.payPurchase({ ...m.payment, purchaseId: m.purchaseId }));
+      return made.reduce((sum, m) => sum + m.payment.amount, 0);
     },
     [purchases, today],
   );
@@ -1509,12 +1693,12 @@ export function useShop(signedIn: boolean) {
     const known = customerStats.find((r) => r.customer.toLowerCase() === typed);
     if (!known || known.owed <= 0) return false;
 
-    const taken = receiveFrom(known.customer, Math.min(amt, known.owed), formDate || today);
+    const taken = receiveFrom(known.customer, Math.min(amt, known.owed), formDate || today, receivedMode);
     if (taken <= 0) return false;
     setFormAmount("");
     setFormCustomer("");
     return true;
-  }, [formAmount, formCustomer, formDate, customerStats, receiveFrom, today]);
+  }, [formAmount, formCustomer, formDate, customerStats, receiveFrom, today, receivedMode]);
 
   const goAddBill = useCallback(() => {
     setActiveTab("bills");
@@ -1578,6 +1762,11 @@ export function useShop(signedIn: boolean) {
     selectedDay,
     isTodayView,
     viewTotal,
+    viewReceived,
+    viewOpening,
+    viewCollected: viewTotal + viewReceived.total,
+    receivedMode,
+    setReceivedMode,
     viewCount: viewBills.length,
     billRows,
     paymentSplit,
@@ -1654,6 +1843,7 @@ export function useShop(signedIn: boolean) {
 
     // stock purchases
     purchaseRows,
+    allPurchaseRows: allRows,
     supplierGroups,
     supplierDues,
     supplierStats,
@@ -1704,6 +1894,7 @@ export function useShop(signedIn: boolean) {
     owingMatches,
     formKind,
     setFormKind,
+    padBlocked,
     purchaseSupplier,
     setPurchaseSupplier,
     purchaseItem,
@@ -1735,6 +1926,10 @@ export function useShop(signedIn: boolean) {
     resetPurchaseForm,
     deletePurchase,
     payPurchase,
+    paySupplier,
+    buyFromSupplier,
+    editPurchasePayment,
+    deletePurchasePayment,
   };
 }
 

@@ -383,6 +383,19 @@
     display: none;
   }
 
+  /*
+   * The left column scrolls inside itself here, and a list floating over it is
+   * cut off at the column's edge — the last shops came out sliced. Inside the
+   * column the list sits in the flow instead, so the column simply grows and
+   * scrolls to show it.
+   */
+  .leftCol .lookupList {
+    position: static;
+    margin-top: 4px;
+    max-height: 176px;
+    box-shadow: none;
+  }
+
   .rightCol {
     grid-column: 2;
   }
@@ -637,8 +650,9 @@
 /* ---------------- Sale / Received switch ---------------- */
 
 .kindSwitch {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
   gap: 4px;
   margin-bottom: 14px;
   padding: 4px;
@@ -646,8 +660,37 @@
   background: var(--surface-alt);
 }
 
+/* The white pill slides to the chosen option instead of jumping. */
+.kindSwitch::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc((100% - (var(--n, 3) + 1) * 4px) / var(--n, 3));
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transform: translateX(calc(var(--i, 0) * (100% + 4px)));
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* What changes underneath eases in rather than snapping. */
+.kindPanel {
+  animation: kindIn 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes kindIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
 .kindButton {
-  padding: 10px 14px;
+  position: relative;
+  padding: 10px 6px;
+  white-space: nowrap;
   border-radius: 999px;
   font-size: 12.5px;
   font-weight: 700;
@@ -656,9 +699,7 @@
 }
 
 .kindOn {
-  background: var(--surface);
   color: var(--text);
-  box-shadow: var(--shadow-sm);
 }
 
 /* What the repayment does to the tab, before it is recorded. */
@@ -829,4 +870,15 @@
 
 .summaryToggleOpen {
   transform: rotate(180deg);
+}
+
+/* The amount box shakes when a key is refused, so it never looks broken. */
+.padBlocked {
+  animation: padShake 0.3s ease;
+}
+
+@keyframes padShake {
+  20% { transform: translateX(-6px); }
+  50% { transform: translateX(6px); }
+  80% { transform: translateX(-3px); }
 }

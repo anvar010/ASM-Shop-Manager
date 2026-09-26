@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from "react";
 import type { Shop } from "@/lib/useShop";
 import { formatINR, groupIN, groupTyped } from "@/lib/format";
 import { UNITS, costOf, isCount, isUnit, unitsLike, type UnitId } from "@/lib/units";
@@ -55,7 +55,18 @@ function apply(a: number, b: number, op: Op): number {
   return b === 0 ? a : a / b;
 }
 
-export default function CalculatorTab({ shop }: { shop: Shop }) {
+/**
+ * The keypad, display and tape. Kept apart from the price list on purpose: it
+ * changes on every key press, and the list — hundreds of cards — must not be
+ * redrawn each time, which is what made the keys feel slow.
+ */
+const Calculator = memo(function Calculator({
+  addRef,
+  qtyOpen,
+}: {
+  addRef: React.MutableRefObject<{ addLine: (amount: number, label: string) => void } | null>;
+  qtyOpen: boolean;
+}) {
   /* `entry` is what is being typed; `acc` is the running total behind it. The
      pair is what lets a shopkeeper chain 20 + 35 + 12 without pressing equals. */
   const [entry, setEntry] = useState("0");
@@ -67,38 +78,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
      right — instead of a column of fragments squashed against one edge. */
   const [tape, setTape] = useState<TapeLine[]>([]);
   const tapeRef = useRef<HTMLDivElement | null>(null);
-  const { ask, dialog } = useConfirm();
-  /* Which item is asking for a quantity, and what has been typed for it. */
-  const [qtyFor, setQtyFor] = useState<string | null>(null);
-  const [qty, setQty] = useState("1");
-  /* Which unit the customer is buying in, which need not be the one the price
-     was quoted in — priced by the 100 gram, bought by the kilo. */
-  const [qtyUnit, setQtyUnit] = useState<UnitId | null>(null);
-  /* Narrows the list to one heading. Local rather than shared state: filtering
-     while ringing up a customer should not disturb the add form. */
-  const [listCategory, setListCategory] = useState("");
-  /* Mirrors the column count in CalculatorTab.module.css. The quantity panel is
-     full width, and a grid cannot start a wide cell mid-row — placing it inside
-     the card left a hole beside every second item — so it is emitted after the
-     row that holds the tapped card instead. */
-  const [cols, setCols] = useState(2);
-
-  useEffect(() => {
-    const wide = window.matchMedia("(min-width: 1280px)");
-    const sync = () => setCols(wide.matches ? 3 : 2);
-    sync();
-    wide.addEventListener("change", sync);
-    return () => wide.removeEventListener("change", sync);
-  }, []);
-
   const value = Number(entry) || 0;
-
-  /* A heading that the search has already emptied stops being an option, so a
-     stale chip falls back to showing everything rather than nothing. */
-  const visibleGroups = shop.priceGroups.filter(
-    (g) => listCategory === "" || g.category === listCategory,
-  );
-  const shownCount = visibleGroups.reduce((n, g) => n + g.items.length, 0);
 
   const press = useCallback((key: string) => {
     setFresh(false);
@@ -182,11 +162,129 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
       else if (e.key === "Enter" || e.key === "=") equals();
       else if (e.key === "Backspace") back();
       // Escape belongs to the quantity panel while one is open.
-      else if (e.key === "Escape" && !qtyFor) clear();
+      else if (e.key === "Escape" && !qtyOpen) clear();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [press, chooseOp, equals, back, clear, qtyFor]);
+  }, [press, chooseOp, equals, back, clear, qtyOpen]);
+
+
+  useEffect(() => {
+    addRef.current = { addLine };
+    return () => {
+      addRef.current = null;
+    };
+  }, [addRef, addLine]);
+
+  /* Fire on the touch itself rather than waiting for the finger to lift, which
+     is what a click does: the number appears the instant the key is pressed.
+     A keyboard "click" has no pointer, so it still works for that. */
+  const tapKey = (action: () => void) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      action();
+    },
+    onClick: (e: React.MouseEvent) => {
+      if (e.detail === 0) action();
+    },
+  });
+
+  return (
+      <section className={`${s2.card} ${c.calcCard}`}>
+        <div className={c.tape} ref={tapeRef}>
+          {tape.length === 0 ? (
+            <span className={c.tapeEmpty}>Add up a basket, or tap a price to bring it over</span>
+          ) : (
+            tape.map((line, i) => (
+              <div
+                key={i}
+                className={`${c.tapeLine} ${line.amount ? "" : c.tapeStep} ${
+                  line.kind === "result" ? c.tapeResult : ""
+                }`}
+              >
+                <span className={`${s2.truncate} ${c.tapeText}`}>{line.text}</span>
+                {line.amount && <span className={`num ${c.tapeAmount}`}>{line.amount}</span>}
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className={c.display}>
+          <span className={c.displayOp}>{op ? OP_SIGN[op] : ""}</span>
+          <span className={`num ${c.displayValue}`}>{groupTyped(entry)}</span>
+        </div>
+
+        <div className={c.keys}>
+          <button type="button" className={`${c.key} ${c.keyWide}`} {...tapKey(clear)}>
+            Clear
+          </button>
+          <button type="button" className={c.key} {...tapKey(back)} aria-label="Backspace">
+            <IconBackspace size={19} color="var(--text-muted)" />
+          </button>
+
+          {KEYS.map((k) =>
+            ["+", "-", "×", "÷"].includes(k) ? (
+              <button
+                key={k}
+                type="button"
+                className={`${c.key} ${c.keyOp}`}
+                {...tapKey(() => chooseOp(k as Op))}
+                aria-label={OP_NAME[k as Op]}
+              >
+                {(() => {
+                  const Sign = OP_ICON[k as Op];
+                  return <Sign size={22} color="currentColor" />;
+                })()}
+              </button>
+            ) : (
+              <button key={k} type="button" className={c.key} {...tapKey(() => press(k))}>
+                {k}
+              </button>
+            ),
+          )}
+
+          <button type="button" className={`${c.key} ${c.keyEquals}`} {...tapKey(equals)}>
+            =
+          </button>
+        </div>
+      </section>
+  );
+});
+
+export default function CalculatorTab({ shop }: { shop: Shop }) {
+  /* The calculator owns its own state, so a key press re-renders it alone and
+     not the whole price list beside it. This is how a price is added to it. */
+  const calc = useRef<{ addLine: (amount: number, label: string) => void } | null>(null);
+  const { ask, dialog } = useConfirm();
+  /* Which item is asking for a quantity, and what has been typed for it. */
+  const [qtyFor, setQtyFor] = useState<string | null>(null);
+  const [qty, setQty] = useState("1");
+  /* Which unit the customer is buying in, which need not be the one the price
+     was quoted in — priced by the 100 gram, bought by the kilo. */
+  const [qtyUnit, setQtyUnit] = useState<UnitId | null>(null);
+  /* Narrows the list to one heading. Local rather than shared state: filtering
+     while ringing up a customer should not disturb the add form. */
+  const [listCategory, setListCategory] = useState("");
+  /* Mirrors the column count in CalculatorTab.module.css. The quantity panel is
+     full width, and a grid cannot start a wide cell mid-row — placing it inside
+     the card left a hole beside every second item — so it is emitted after the
+     row that holds the tapped card instead. */
+  const [cols, setCols] = useState(2);
+
+  useEffect(() => {
+    const wide = window.matchMedia("(min-width: 1280px)");
+    const sync = () => setCols(wide.matches ? 3 : 2);
+    sync();
+    wide.addEventListener("change", sync);
+    return () => wide.removeEventListener("change", sync);
+  }, []);
+
+  /* A heading that the search has already emptied stops being an option, so a
+     stale chip falls back to showing everything rather than nothing. */
+  const visibleGroups = shop.priceGroups.filter(
+    (g) => listCategory === "" || g.category === listCategory,
+  );
+  const shownCount = visibleGroups.reduce((n, g) => n + g.items.length, 0);
 
   /* Tapping away puts the panel down. Anything the panel owns — its own card
      included — is marked, so a press inside it is not "outside". */
@@ -290,7 +388,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
           className={c.qtyAdd}
           disabled={!(n > 0)}
           onClick={() => {
-            addLine(total, `${n} ${shown} ${p.name}`);
+            calc.current?.addLine(total, `${n} ${shown} ${p.name}`);
             setQtyFor(null);
           }}
         >
@@ -303,65 +401,7 @@ export default function CalculatorTab({ shop }: { shop: Shop }) {
 
   return (
     <div className={c.layout}>
-      {/* ---------------- Calculator ---------------- */}
-      <section className={`${s2.card} ${c.calcCard}`}>
-        <div className={c.tape} ref={tapeRef}>
-          {tape.length === 0 ? (
-            <span className={c.tapeEmpty}>Add up a basket, or tap a price to bring it over</span>
-          ) : (
-            tape.map((line, i) => (
-              <div
-                key={i}
-                className={`${c.tapeLine} ${line.amount ? "" : c.tapeStep} ${
-                  line.kind === "result" ? c.tapeResult : ""
-                }`}
-              >
-                <span className={`${s2.truncate} ${c.tapeText}`}>{line.text}</span>
-                {line.amount && <span className={`num ${c.tapeAmount}`}>{line.amount}</span>}
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className={c.display}>
-          <span className={c.displayOp}>{op ? OP_SIGN[op] : ""}</span>
-          <span className={`num ${c.displayValue}`}>{groupTyped(entry)}</span>
-        </div>
-
-        <div className={c.keys}>
-          <button type="button" className={`${c.key} ${c.keyWide}`} onClick={clear}>
-            Clear
-          </button>
-          <button type="button" className={c.key} onClick={back} aria-label="Backspace">
-            <IconBackspace size={19} color="var(--text-muted)" />
-          </button>
-
-          {KEYS.map((k) =>
-            ["+", "-", "×", "÷"].includes(k) ? (
-              <button
-                key={k}
-                type="button"
-                className={`${c.key} ${c.keyOp}`}
-                onClick={() => chooseOp(k as Op)}
-                aria-label={OP_NAME[k as Op]}
-              >
-                {(() => {
-                  const Sign = OP_ICON[k as Op];
-                  return <Sign size={22} color="currentColor" />;
-                })()}
-              </button>
-            ) : (
-              <button key={k} type="button" className={c.key} onClick={() => press(k)}>
-                {k}
-              </button>
-            ),
-          )}
-
-          <button type="button" className={`${c.key} ${c.keyEquals}`} onClick={equals}>
-            =
-          </button>
-        </div>
-      </section>
+      <Calculator addRef={calc} qtyOpen={qtyFor !== null} />
 
       {/* ---------------- Price list ---------------- */}
       <div className={c.priceCol}>

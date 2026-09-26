@@ -317,7 +317,7 @@ export const api = {
     send("/api/bills", { ...json(bill), method: "PATCH" }, "the changes"),
   deleteBill: (id: string) =>
     send(`/api/bills?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
-  settleBill: (p: { id: string; billId: string; date: string; amount: number }) =>
+  settleBill: (p: { id: string; billId: string; date: string; amount: number; mode?: "cash" | "upi" }) =>
     send("/api/bills/settle", json(p), "the payment"),
 
   addExpense: (expense: Expense) => send("/api/expenses", json(expense), "the expense"),
@@ -333,6 +333,11 @@ export const api = {
     send(`/api/purchases?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
   payPurchase: (p: { id: string; purchaseId: string; date: string; amount: number }) =>
     send("/api/purchases/pay", json(p), "the payment"),
+
+  updatePurchasePayment: (p: { id: string; amount: number }) =>
+    send("/api/purchases/pay", { ...json(p), method: "PATCH" }, "the correction"),
+  deletePurchasePayment: (id: string) =>
+    send(`/api/purchases/pay?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
 
   savePrice: (item: PriceItem) => send("/api/prices", json(item), "the price"),
   deletePrice: (id: string) =>

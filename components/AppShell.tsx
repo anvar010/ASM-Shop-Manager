@@ -41,7 +41,7 @@ export const TABS: Tab[] = [
   { id: "overview", label: "Overview", title: "Overview", Icon: IconTrend, adminOnly: true },
   { id: "credits", label: "Credits", title: "Credit Customers", Icon: IconUsers, staffOnly: true, href: "/credits" },
   { id: "expenses", label: "Expenses", title: "Expenses", Icon: IconNote },
-  { id: "stock", label: "Stock", title: "Stock Purchases", Icon: IconBox },
+  { id: "stock", label: "Supplier", title: "Supplier Purchases", Icon: IconBox },
   { id: "calculator", label: "Calculator", title: "Calculator", Icon: IconCalculator, tabletOnly: true },
 ];
 
