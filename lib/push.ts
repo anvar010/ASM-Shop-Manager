@@ -52,7 +52,10 @@ export async function pushToAdmins(message: PushMessage): Promise<number> {
        WHERE u.role = 'admin' AND u.active = 1`,
     );
     const subs = rows as Row[];
-    if (subs.length === 0) return 0;
+    if (subs.length === 0) {
+      console.warn("push: no owner device is subscribed, nothing sent");
+      return 0;
+    }
 
     const payload = JSON.stringify(message);
     const dead: string[] = [];
@@ -69,6 +72,7 @@ export async function pushToAdmins(message: PushMessage): Promise<number> {
                uninstalled, or permission revoked. Keeping it would retry a
                dead endpoint forever. */
             if (err.statusCode === 404 || err.statusCode === 410) dead.push(s.id);
+            console.error(`push: send failed (${err.statusCode ?? "no status"})`, s.endpoint.slice(0, 60));
             throw err;
           }),
       ),

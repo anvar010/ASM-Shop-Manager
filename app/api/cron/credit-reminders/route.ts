@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { customersOverLimit } from "@/lib/credit";
+import { creditLimit, customersOverLimit } from "@/lib/credit";
 import { formatINR } from "@/lib/format";
 import { pushToAdmins } from "@/lib/push";
 
@@ -18,20 +18,24 @@ export async function GET(request: Request) {
 
   try {
     const over = await customersOverLimit();
-    if (over.length === 0) return NextResponse.json({ ok: true, over: 0 });
+    if (over.length === 0) {
+      console.log(`credit-reminders: nobody is over the limit of ${creditLimit()}`);
+      return NextResponse.json({ ok: true, over: 0, limit: creditLimit() });
+    }
 
     const top = over
       .slice(0, 3)
       .map((o) => `${o.customer} ${formatINR(o.owed)}`)
       .join(", ");
     const more = over.length > 3 ? ` and ${over.length - 3} more` : "";
-    await pushToAdmins({
+    const sent = await pushToAdmins({
       title: `${over.length} ${over.length === 1 ? "customer owes" : "customers owe"} over the limit`,
       body: `${top}${more}.`,
       url: "/credits",
       tag: "credit-daily",
     });
-    return NextResponse.json({ ok: true, over: over.length });
+    console.log(`credit-reminders: ${over.length} over the limit, ${sent} device(s) notified`);
+    return NextResponse.json({ ok: true, over: over.length, sent });
   } catch (e) {
     console.error("GET /api/cron/credit-reminders", e);
     return NextResponse.json({ error: "Could not send reminders" }, { status: 500 });
