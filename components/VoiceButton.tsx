@@ -26,9 +26,12 @@ function ctor(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+const BLOCKED =
+  "Microphone is blocked. Allow it in the browser's site settings (or the phone's Settings for this app), then try again.";
+
 const PROBLEMS: Record<string, string> = {
-  "not-allowed": "Allow the microphone to use voice entry.",
-  "service-not-allowed": "Allow the microphone to use voice entry.",
+  "not-allowed": BLOCKED,
+  "service-not-allowed": BLOCKED,
   "no-speech": "Nothing was heard. Try again.",
   network: "Voice entry needs an internet connection.",
 };
@@ -56,13 +59,36 @@ export default function VoiceButton({
 
   if (!supported) return null;
 
-  function toggle() {
+  /* Recognition alone often fails with "not-allowed" on a phone without ever
+     showing a prompt. Asking for the microphone directly is what raises the
+     permission dialog; the stream is released straight away so the recognizer
+     can have the microphone. */
+  async function ensureMicrophone(): Promise<boolean> {
+    if (!navigator.mediaDevices?.getUserMedia) return true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      setNote(
+        name === "NotFoundError"
+          ? "No microphone found on this device."
+          : BLOCKED,
+      );
+      return false;
+    }
+  }
+
+  async function toggle() {
     if (listening) {
       rec.current?.stop();
       return;
     }
     const Ctor = ctor();
     if (!Ctor) return;
+    setNote("");
+    if (!(await ensureMicrophone())) return;
 
     const r = new Ctor();
     r.lang = "ml-IN";
@@ -96,7 +122,7 @@ export default function VoiceButton({
       <button
         type="button"
         className={className}
-        onClick={toggle}
+        onClick={() => void toggle()}
         aria-pressed={listening}
         aria-label={listening ? "Stop listening" : "Speak the entry in Malayalam"}
         title={listening ? "Listening… tap to stop" : "Speak in Malayalam"}
