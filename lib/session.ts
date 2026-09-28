@@ -12,11 +12,14 @@ export async function currentUser(): Promise<SessionUser | null> {
  * server actually enforces, so a staff account cannot read admin data by
  * calling the API directly.
  */
-export function canAccess(role: Role, area: "bills" | "purchases" | "expenses" | "reports") {
+export function canAccess(
+  role: Role,
+  area: "bills" | "purchases" | "expenses" | "reports" | "closings",
+) {
   if (role === "admin") return true;
   /* Staff keep the shop running day to day, which includes paying for things
-     out of the till, so expenses are theirs to record as well. Reports stay
-     with the owner: what the shop earns is a different question from what it
-     spends. */
-  return area === "bills" || area === "purchases" || area === "expenses";
+     out of the till and counting the drawer closed, so expenses and closings
+     are theirs too. Reports stay with the owner: what the shop earns is a
+     different question from what it spends. */
+  return area === "bills" || area === "purchases" || area === "expenses" || area === "closings";
 }

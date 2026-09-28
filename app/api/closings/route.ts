@@ -16,11 +16,11 @@ function missingTable(e: unknown): boolean {
   return code === "ER_NO_SUCH_TABLE" || code === "ER_BAD_FIELD_ERROR";
 }
 
-/** Recent closings, newest first. Owner only: a shortage is not staff's to browse. */
+/** Recent closings, newest first. */
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!canAccess(user.role, "reports")) {
+  if (!canAccess(user.role, "closings")) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
   try {
@@ -42,7 +42,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!canAccess(user.role, "reports")) {
+  if (!canAccess(user.role, "closings")) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
   try {
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  if (!canAccess(user.role, "reports")) {
+  if (!canAccess(user.role, "closings")) {
     return NextResponse.json({ error: "Not allowed" }, { status: 403 });
   }
   const date = new URL(request.url).searchParams.get("date") ?? "";

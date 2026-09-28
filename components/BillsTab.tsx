@@ -5,7 +5,6 @@ import { useConfirm } from "./ConfirmDialog";
 import BillRowEditor from "./BillRowEditor";
 import VoiceButton from "./VoiceButton";
 import DayClosing from "./DayClosing";
-import { useUser } from "@/lib/shopContext";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatDMY, formatINR, groupIN } from "@/lib/format";
@@ -21,7 +20,6 @@ function typedAmountRaw(text: string): number {
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
-  const isOwner = useUser()?.role === "admin";
   const { ask, dialog } = useConfirm();
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
@@ -839,7 +837,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           </div>
 
           {/* Below the entry form, so it is at hand without opening the summary. */}
-          {isOwner && <DayClosing shop={shop} light />}
+          <DayClosing shop={shop} light />
         </div>
 
         <div className={c.rightCol} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
