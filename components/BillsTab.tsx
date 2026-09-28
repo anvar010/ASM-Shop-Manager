@@ -773,6 +773,10 @@ export default function BillsTab({ shop }: { shop: Shop }) {
       )}
 
         <div className={c.leftCol} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {/* Only the summary and form scroll on a tablet — "Close the day" stays
+              outside this wrapper so it can never end up scrolled out of sight
+              inside the capped column below. */}
+          <div className={c.leftColScroll}>
           {/* Two halves — the day's total, and where that money sits. Stacked on
               a phone; side by side once there is width, which halves the height
               and lets the form below stay on screen. */}
@@ -832,6 +836,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
           </section>
 
           {showForm && form}
+          </div>
 
           {/* Below the entry form, so it is at hand without opening the summary. */}
           {isOwner && <DayClosing shop={shop} light />}

@@ -374,12 +374,25 @@
     max-height: calc(
       100svh - 88px - env(safe-area-inset-top, 0px) - var(--nav-h) - 20px
     );
+  }
+
+  /*
+   * Only the summary and form scroll here, not the whole column — "Close the
+   * day" sits below this wrapper (see BillsTab.tsx) so a tall summary/form
+   * can never scroll it out of view with no visible scrollbar to hint at it.
+   */
+  .leftColScroll {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     overflow-y: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
   }
 
-  .leftCol::-webkit-scrollbar {
+  .leftColScroll::-webkit-scrollbar {
     display: none;
   }
 
@@ -389,7 +402,7 @@
    * column the list sits in the flow instead, so the column simply grows and
    * scrolls to show it.
    */
-  .leftCol .lookupList {
+  .leftColScroll .lookupList {
     position: static;
     margin-top: 4px;
     max-height: 176px;
