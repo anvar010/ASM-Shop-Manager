@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useShopContext, useUser } from "@/lib/shopContext";
 import { PURCHASE_RANGES } from "@/lib/constants";
 import { formatDateKey, formatINR } from "@/lib/format";
 import AppShell from "./AppShell";
 import CalendarFilter from "./CalendarFilter";
+import { useConfirm } from "./ConfirmDialog";
 import s from "./shared.module.css";
 import c from "./CreditorsPage.module.css";
 import {
@@ -13,7 +15,9 @@ import {
   IconBill,
   IconCalendar,
   IconChevron,
+  IconPencil,
   IconSearch,
+  IconTrash,
   IconWhatsapp,
 } from "./Icons";
 
@@ -21,9 +25,21 @@ export default function CreditorsPage() {
   const shop = useShopContext();
   const user = useUser();
   const isAdmin = user?.role === "admin";
+  const router = useRouter();
+  const { ask, dialog } = useConfirm();
   const [calOpen, setCalOpen] = useState(false);
   const [openNames, setOpenNames] = useState<string[]>([]);
   const calRef = useRef<HTMLDivElement | null>(null);
+
+  /* Editing a credit bill happens on the Bills tab, where the form and
+     keypad already live — so jump there with the right day selected and
+     the row already loaded into the editor. */
+  function editBillOnBillsTab(id: string, date: string) {
+    shop.setSelectedDate(date);
+    shop.editBill(id);
+    shop.setActiveTab("bills");
+    router.push("/");
+  }
 
   useEffect(() => {
     if (!calOpen) return;
@@ -216,6 +232,38 @@ export default function CreditorsPage() {
                                 <div className={c.billBalance}>{b.balanceLabel} left</div>
                               )}
                             </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                              <button
+                                type="button"
+                                className={s.rowAction}
+                                onClick={() => editBillOnBillsTab(b.id, b.date)}
+                                aria-label={`Edit ${b.desc}`}
+                              >
+                                <span className={s.rowActionInner}>
+                                  <IconPencil size={13} color="var(--text-muted)" />
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className={s.rowAction}
+                                onClick={() =>
+                                  ask({
+                                    title: "Delete this credit bill?",
+                                    detail: `${b.desc} · ${b.amountLabel} · ${b.catLabel}, ${b.dayLabel}.`,
+                                    warning:
+                                      b.payLog.length > 0
+                                        ? "Everything this customer has repaid against it goes with it."
+                                        : undefined,
+                                    onConfirm: () => shop.deleteBill(b.id),
+                                  })
+                                }
+                                aria-label={`Delete ${b.desc}`}
+                              >
+                                <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
+                                  <IconTrash size={13} color="var(--danger)" />
+                                </span>
+                              </button>
+                            </div>
                           </div>
 
                           {/* What they have paid back so far, oldest first. */}
@@ -310,6 +358,7 @@ export default function CreditorsPage() {
           </div>
         </section>
       )}
+      {dialog}
     </AppShell>
   );
 }

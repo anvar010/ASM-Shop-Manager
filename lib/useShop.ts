@@ -524,6 +524,43 @@ export function useShop(signedIn: boolean) {
     [viewBills],
   );
 
+  /*
+   * Repayments live on the bill they are against, not as their own row, so
+   * they never showed up in the day's entries — a customer paying back cash
+   * looked like it came from nowhere. Pulled out here and merged with the
+   * sales below so the list matches what actually happened that day.
+   */
+  const viewReceivedRows = useMemo(
+    () =>
+      bills.flatMap((b) =>
+        (b.creditPayments ?? [])
+          .filter((p) => p.date === selectedDate)
+          .map((p) => {
+            const mode = modeMeta(p.mode === "upi" ? "upi" : "cash");
+            const at = p.at ? new Date(p.at) : null;
+            return {
+              kind: "received" as const,
+              id: p.id,
+              billId: b.id,
+              customer: b.customer || "Unnamed",
+              desc: b.desc,
+              amount: p.amount,
+              amountLabel: formatINR(p.amount),
+              modeLabel: mode.label,
+              modeColor: mode.color,
+              time: at ? formatTime(at) : "",
+              sortMinutes: at ? at.getHours() * 60 + at.getMinutes() : -1,
+            };
+          }),
+      ),
+    [bills, selectedDate],
+  );
+
+  const viewEntries = useMemo(() => {
+    const sales = billRows.map((b) => ({ kind: "sale" as const, sortMinutes: minutesOfDay(b.time), ...b }));
+    return [...sales, ...viewReceivedRows].sort((a, z) => z.sortMinutes - a.sortMinutes);
+  }, [billRows, viewReceivedRows]);
+
   const todayRows = useMemo(
     () =>
       todaysBills.map((b) => {
@@ -1341,7 +1378,7 @@ export function useShop(signedIn: boolean) {
       const take = Math.min(amount, owed);
       if (take <= 0) return;
 
-      const payment = { id: newId("cp"), date: today, amount: take };
+      const payment = { id: newId("cp"), date: today, amount: take, at: new Date().toISOString() };
       setBills((prev) =>
         prev.map((b) =>
           b.id === id ? { ...b, creditPayments: [...(b.creditPayments ?? []), payment] } : b,
@@ -1365,7 +1402,13 @@ export function useShop(signedIn: boolean) {
           return { billId: b.id, owed };
         })
         .filter((x) => x.owed > 0)
-        .map((x) => ({ billId: x.billId, id: newId("cp"), date: today, amount: x.owed }));
+        .map((x) => ({
+          billId: x.billId,
+          id: newId("cp"),
+          date: today,
+          amount: x.owed,
+          at: new Date().toISOString(),
+        }));
       if (owing.length === 0) return;
 
       setBills((prev) =>
@@ -1413,11 +1456,19 @@ export function useShop(signedIn: boolean) {
          setState updater runs twice under StrictMode, which once turned a
          ₹200 repayment into ₹400. */
       let left = Math.round(amount * 100);
-      const pays: { billId: string; id: string; date: string; amount: number; mode: "cash" | "upi" }[] = [];
+      const pays: {
+        billId: string;
+        id: string;
+        date: string;
+        amount: number;
+        mode: "cash" | "upi";
+        at: string;
+      }[] = [];
+      const at = new Date().toISOString();
       for (const { bill, owed } of owing) {
         if (left <= 0) break;
         const take = Math.min(left, Math.round(owed * 100));
-        pays.push({ billId: bill.id, id: newId("cp"), date, amount: take / 100, mode });
+        pays.push({ billId: bill.id, id: newId("cp"), date, amount: take / 100, mode, at });
         left -= take;
       }
       if (pays.length === 0) return 0;
@@ -1435,6 +1486,47 @@ export function useShop(signedIn: boolean) {
     },
     [bills],
   );
+
+  /** Corrects a repayment's amount, never taking a bill past what it is worth. */
+  const editCreditPayment = useCallback(
+    (billId: string, paymentId: string, amount: number): boolean => {
+      const bill = bills.find((b) => b.id === billId);
+      const pay = bill?.creditPayments?.find((x) => x.id === paymentId);
+      if (!bill || !pay || !(amount > 0)) return false;
+      const others = (bill.creditPayments ?? []).reduce(
+        (sum, x) => (x.id === paymentId ? sum : sum + x.amount),
+        0,
+      );
+      if (others + amount > bill.amount + 0.001) return false;
+
+      setBills((prev) =>
+        prev.map((b) =>
+          b.id === billId
+            ? {
+                ...b,
+                creditPayments: (b.creditPayments ?? []).map((x) =>
+                  x.id === paymentId ? { ...x, amount } : x,
+                ),
+              }
+            : b,
+        ),
+      );
+      api.updateCreditPayment({ id: paymentId, amount });
+      return true;
+    },
+    [bills],
+  );
+
+  const deleteCreditPayment = useCallback((billId: string, paymentId: string) => {
+    setBills((prev) =>
+      prev.map((b) =>
+        b.id === billId
+          ? { ...b, creditPayments: (b.creditPayments ?? []).filter((x) => x.id !== paymentId) }
+          : b,
+      ),
+    );
+    api.deleteCreditPayment(paymentId);
+  }, []);
 
   const pickCreditDate = useCallback(
     (key: string) => {
@@ -1769,6 +1861,7 @@ export function useShop(signedIn: boolean) {
     setReceivedMode,
     viewCount: viewBills.length,
     billRows,
+    viewEntries,
     paymentSplit,
     cashInDrawer,
     viewCashSales,
@@ -1889,6 +1982,8 @@ export function useShop(signedIn: boolean) {
     settleCredit,
     settleAllFor,
     receiveFrom,
+    editCreditPayment,
+    deleteCreditPayment,
     saveReceived,
     receiveTarget,
     owingMatches,

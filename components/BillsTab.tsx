@@ -20,6 +20,8 @@ function typedAmountRaw(text: string): number {
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editPaymentAmount, setEditPaymentAmount] = useState("");
   const { ask, dialog } = useConfirm();
   const showForm = shop.isTodayView;
   const amountDisplay = shop.formAmount === "" ? "0" : groupIN(Number(shop.formAmount));
@@ -630,12 +632,81 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         </div>
       </div>
 
-      {shop.billRows.length > 0 ? (
+      {shop.viewEntries.length > 0 ? (
         <>
           <div className={c.entriesList} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {shop.billRows.map((b) =>
-              shop.editingBillId === b.id ? (
-                <BillRowEditor key={b.id} shop={shop} />
+            {shop.viewEntries.map((b) =>
+              b.kind === "sale" ? (
+                shop.editingBillId === b.id ? (
+                  <BillRowEditor key={b.id} shop={shop} />
+                ) : (
+                  <div key={b.id} className={`${s.cardSm} ${c.billRow}`}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+                      <span
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 999,
+                          background: b.catColor,
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div className={s.truncate} style={{ fontSize: 13, fontWeight: 700 }}>
+                          {b.desc}
+                        </div>
+                        <div className={c.billMeta}>
+                          <span className={c.modeBadge} style={{ background: b.modeColor }}>
+                            {b.modeLabel}
+                          </span>
+                          <span
+                            className={s.truncate}
+                            style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600 }}
+                          >
+                            {b.customer ? `${b.customer} · ` : ""}
+                            {b.catLabel} · {b.time}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                      <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
+                        {b.amountLabel}
+                      </div>
+                      <button
+                        type="button"
+                        className={s.rowAction}
+                        onClick={() => shop.editBill(b.id)}
+                        aria-label={`Edit ${b.desc}`}
+                      >
+                        <span className={s.rowActionInner}>
+                          <IconPencil size={13} color="var(--text-muted)" />
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={s.rowAction}
+                        onClick={() =>
+                          ask({
+                            title: `Delete this ${b.modeLabel.toLowerCase()} bill?`,
+                            detail: `${b.desc} · ${b.amountLabel} · ${b.catLabel}, ${b.time}.`,
+                            warning:
+                              b.mode === "credit" && (b.creditPayments?.length ?? 0) > 0
+                                ? "Everything this customer has repaid against it goes with it."
+                                : undefined,
+                            onConfirm: () => shop.deleteBill(b.id),
+                          })
+                        }
+                        aria-label={`Delete ${b.desc}`}
+                      >
+                        <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
+                          <IconTrash size={13} color="var(--danger)" />
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )
               ) : (
                 <div key={b.id} className={`${s.cardSm} ${c.billRow}`}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
@@ -644,13 +715,13 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                         width: 8,
                         height: 8,
                         borderRadius: 999,
-                        background: b.catColor,
+                        background: "var(--success)",
                         flexShrink: 0,
                       }}
                     />
                     <div style={{ minWidth: 0 }}>
                       <div className={s.truncate} style={{ fontSize: 13, fontWeight: 700 }}>
-                        {b.desc}
+                        Received
                       </div>
                       <div className={c.billMeta}>
                         <span className={c.modeBadge} style={{ background: b.modeColor }}>
@@ -660,48 +731,88 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                           className={s.truncate}
                           style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600 }}
                         >
-                          {b.customer ? `${b.customer} · ` : ""}
-                          {b.catLabel} · {b.time}
+                          {b.customer} · {b.time}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-                    <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
-                      {b.amountLabel}
+                  {editingPaymentId === b.id ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                      <input
+                        className="num"
+                        type="number"
+                        inputMode="decimal"
+                        min="0"
+                        value={editPaymentAmount}
+                        onChange={(e) => setEditPaymentAmount(e.target.value)}
+                        aria-label={`Amount received from ${b.customer}`}
+                        autoFocus
+                        style={{
+                          width: 72,
+                          padding: "4px 6px",
+                          border: "1px solid var(--border)",
+                          borderRadius: 6,
+                          fontSize: 13,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={`${s.linkButton} tap`}
+                        onClick={() => {
+                          const amt = parseFloat(editPaymentAmount);
+                          if (amt > 0 && shop.editCreditPayment(b.billId, b.id, amt)) {
+                            setEditingPaymentId(null);
+                          }
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className={`${s.linkButton} tap`}
+                        style={{ color: "var(--text-muted)" }}
+                        onClick={() => setEditingPaymentId(null)}
+                      >
+                        Cancel
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      className={s.rowAction}
-                      onClick={() => shop.editBill(b.id)}
-                      aria-label={`Edit ${b.desc}`}
-                    >
-                      <span className={s.rowActionInner}>
-                        <IconPencil size={13} color="var(--text-muted)" />
-                      </span>
-                    </button>
-                    <button
-                      type="button"
-                      className={s.rowAction}
-                      onClick={() =>
-                        ask({
-                          title: `Delete this ${b.modeLabel.toLowerCase()} bill?`,
-                          detail: `${b.desc} · ${b.amountLabel} · ${b.catLabel}, ${b.time}.`,
-                          warning:
-                            b.mode === "credit" && (b.creditPayments?.length ?? 0) > 0
-                              ? "Everything this customer has repaid against it goes with it."
-                              : undefined,
-                          onConfirm: () => shop.deleteBill(b.id),
-                        })
-                      }
-                      aria-label={`Delete ${b.desc}`}
-                    >
-                      <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
-                        <IconTrash size={13} color="var(--danger)" />
-                      </span>
-                    </button>
-                  </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
+                      <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
+                        {b.amountLabel}
+                      </div>
+                      <button
+                        type="button"
+                        className={s.rowAction}
+                        onClick={() => {
+                          setEditingPaymentId(b.id);
+                          setEditPaymentAmount(String(b.amount));
+                        }}
+                        aria-label={`Edit payment from ${b.customer}`}
+                      >
+                        <span className={s.rowActionInner}>
+                          <IconPencil size={13} color="var(--text-muted)" />
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className={s.rowAction}
+                        onClick={() =>
+                          ask({
+                            title: "Delete this repayment?",
+                            detail: `${b.amountLabel} from ${b.customer} · ${b.time}.`,
+                            onConfirm: () => shop.deleteCreditPayment(b.billId, b.id),
+                          })
+                        }
+                        aria-label={`Delete payment from ${b.customer}`}
+                      >
+                        <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
+                          <IconTrash size={13} color="var(--danger)" />
+                        </span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ),
             )}
