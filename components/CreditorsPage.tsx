@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useShopContext, useUser } from "@/lib/shopContext";
 import { PURCHASE_RANGES } from "@/lib/constants";
 import { formatDateKey, formatINR } from "@/lib/format";
 import AppShell from "./AppShell";
+import BillRowEditor from "./BillRowEditor";
 import CalendarFilter from "./CalendarFilter";
 import { useConfirm } from "./ConfirmDialog";
 import s from "./shared.module.css";
@@ -25,23 +25,12 @@ export default function CreditorsPage() {
   const shop = useShopContext();
   const user = useUser();
   const isAdmin = user?.role === "admin";
-  const router = useRouter();
   const { ask, dialog } = useConfirm();
   const [calOpen, setCalOpen] = useState(false);
   const [openNames, setOpenNames] = useState<string[]>([]);
   const [renamingName, setRenamingName] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const calRef = useRef<HTMLDivElement | null>(null);
-
-  /* Editing a credit bill happens on the Bills tab, where the form and
-     keypad already live — so jump there with the right day selected and
-     the row already loaded into the editor. */
-  function editBillOnBillsTab(id: string, date: string) {
-    shop.setSelectedDate(date);
-    shop.editBill(id);
-    shop.setActiveTab("bills");
-    router.push("/");
-  }
 
   useEffect(() => {
     if (!calOpen) return;
@@ -287,6 +276,9 @@ export default function CreditorsPage() {
                       const settling = shop.settlingId === b.id;
                       const typed = parseFloat(shop.settleAmount);
                       const take = Number.isNaN(typed) ? b.balance : Math.min(typed, b.balance);
+                      if (shop.editingBillId === b.id) {
+                        return <BillRowEditor key={b.id} shop={shop} />;
+                      }
                       return (
                         <div key={b.id} className={c.billRow}>
                           <div className={c.billTop}>
@@ -310,7 +302,7 @@ export default function CreditorsPage() {
                               <button
                                 type="button"
                                 className={s.rowAction}
-                                onClick={() => editBillOnBillsTab(b.id, b.date)}
+                                onClick={() => shop.editBill(b.id)}
                                 aria-label={`Edit ${b.desc}`}
                               >
                                 <span className={s.rowActionInner}>
