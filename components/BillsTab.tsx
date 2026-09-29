@@ -647,7 +647,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                           width: 8,
                           height: 8,
                           borderRadius: 999,
-                          background: b.catColor,
+                          background: "var(--text-faint)",
                           flexShrink: 0,
                         }}
                       />
@@ -715,7 +715,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                         width: 8,
                         height: 8,
                         borderRadius: 999,
-                        background: "var(--success)",
+                        background: "var(--text-faint)",
                         flexShrink: 0,
                       }}
                     />

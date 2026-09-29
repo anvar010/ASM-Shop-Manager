@@ -74,6 +74,20 @@
 .personRow {
   display: flex;
   align-items: stretch;
+  gap: 4px;
+}
+
+/*
+ * The row stretches its children to the card's full height, which is right
+ * for the share link (its own height is auto, so it fills). The edit/delete
+ * buttons set a fixed height instead, so stretch pins them to the top rather
+ * than centering them — this wrapper centers them itself.
+ */
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
 }
 
 .personHead {

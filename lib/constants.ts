@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 export const CATEGORIES: Category[] = [
-  { id: "groceries", label: "Groceries", color: "#2952CC" },
+  { id: "groceries", label: "Groceries", color: "#7048C4" },
   { id: "produce", label: "Fruits & Vegetables", color: "#1E9E6B" },
   { id: "other", label: "Other", color: "#8B92A0" },
 ];

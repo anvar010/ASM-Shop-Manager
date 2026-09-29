@@ -323,6 +323,14 @@ export const api = {
     send("/api/bills/settle", { ...json(p), method: "PATCH" }, "the correction"),
   deleteCreditPayment: (id: string) =>
     send(`/api/bills/settle?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
+  renameCreditCustomer: (from: string, to: string) =>
+    send("/api/bills/customer", { ...json({ from, to }), method: "PATCH" }, "the rename"),
+  deleteCreditCustomer: (customer: string) =>
+    send(
+      `/api/bills/customer?customer=${encodeURIComponent(customer)}`,
+      { method: "DELETE" },
+      "the deletion",
+    ),
 
   addExpense: (expense: Expense) => send("/api/expenses", json(expense), "the expense"),
   updateExpense: (expense: Expense) =>

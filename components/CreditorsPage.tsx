@@ -29,6 +29,8 @@ export default function CreditorsPage() {
   const { ask, dialog } = useConfirm();
   const [calOpen, setCalOpen] = useState(false);
   const [openNames, setOpenNames] = useState<string[]>([]);
+  const [renamingName, setRenamingName] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const calRef = useRef<HTMLDivElement | null>(null);
 
   /* Editing a credit bill happens on the Bills tab, where the form and
@@ -165,6 +167,41 @@ export default function CreditorsPage() {
             return (
               <div key={g.customer} className={`${s.cardSm} ${c.personCard}`}>
                 <div className={c.personRow}>
+                {renamingName === g.customer ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, padding: "10px 14px" }}>
+                    <input
+                      className={s.input}
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      aria-label={`Rename ${g.customer}`}
+                      autoFocus
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      className={`${s.linkButton} tap`}
+                      onClick={() => {
+                        const name = renameValue.trim();
+                        if (name && shop.renameCreditCustomer(g.customer, name)) {
+                          setOpenNames((prev) => prev.map((x) => (x === g.customer ? name : x)));
+                          setRenamingName(null);
+                        }
+                      }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className={`${s.linkButton} tap`}
+                      style={{ color: "var(--text-muted)" }}
+                      onClick={() => setRenamingName(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <>
                 <button
                   type="button"
                   className={c.personHead}
@@ -192,6 +229,41 @@ export default function CreditorsPage() {
                   </span>
                 </button>
 
+                <div className={c.rowActions}>
+                <button
+                  type="button"
+                  className={s.rowAction}
+                  onClick={() => {
+                    setRenamingName(g.customer);
+                    setRenameValue(g.customer === "Unnamed" ? "" : g.customer);
+                  }}
+                  aria-label={`Rename ${g.customer}`}
+                >
+                  <span className={s.rowActionInner}>
+                    <IconPencil size={13} color="var(--text-muted)" />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className={s.rowAction}
+                  onClick={() =>
+                    ask({
+                      title: `Delete ${g.customer}?`,
+                      detail: `${g.rows.length} ${g.rows.length === 1 ? "bill" : "bills"} · ${g.takenLabel} taken${
+                        g.owed > 0 ? `, ${g.owedLabel} still owing` : ""
+                      }.`,
+                      warning: "Every bill and repayment for this customer is removed for good — this cannot be undone.",
+                      onConfirm: () => shop.deleteCreditCustomer(g.customer),
+                    })
+                  }
+                  aria-label={`Delete ${g.customer}`}
+                >
+                  <span className={`${s.rowActionInner} ${s.rowActionDanger}`}>
+                    <IconTrash size={13} color="var(--danger)" />
+                  </span>
+                </button>
+                </div>
+
                 {/* A plain link, so WhatsApp opens in the same tap that made
                     it — building the address in script and opening a window
                     afterwards is what pop-up blocking stops. */}
@@ -205,6 +277,8 @@ export default function CreditorsPage() {
                 >
                   <IconWhatsapp size={17} color="currentColor" />
                 </a>
+                  </>
+                )}
                 </div>
 
                 {open && (

@@ -1528,6 +1528,31 @@ export function useShop(signedIn: boolean) {
     api.deleteCreditPayment(paymentId);
   }, []);
 
+  /** Renames a credit customer across every bill filed under them. */
+  const renameCreditCustomer = useCallback((from: string, to: string): boolean => {
+    const newName = to.trim();
+    if (!newName) return false;
+    const unnamed = from === "Unnamed";
+    setBills((prev) =>
+      prev.map((b) => {
+        if (b.mode !== "credit") return b;
+        const matches = unnamed ? !b.customer : b.customer === from;
+        return matches ? { ...b, customer: newName } : b;
+      }),
+    );
+    api.renameCreditCustomer(from, newName);
+    return true;
+  }, []);
+
+  /** Removes every credit bill — and repayments against them — for one customer. */
+  const deleteCreditCustomer = useCallback((name: string) => {
+    const unnamed = name === "Unnamed";
+    setBills((prev) =>
+      prev.filter((b) => !(b.mode === "credit" && (unnamed ? !b.customer : b.customer === name))),
+    );
+    api.deleteCreditCustomer(name);
+  }, []);
+
   const pickCreditDate = useCallback(
     (key: string) => {
       setCreditRange("custom");
@@ -1984,6 +2009,8 @@ export function useShop(signedIn: boolean) {
     receiveFrom,
     editCreditPayment,
     deleteCreditPayment,
+    renameCreditCustomer,
+    deleteCreditCustomer,
     saveReceived,
     receiveTarget,
     owingMatches,
