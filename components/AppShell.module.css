@@ -93,6 +93,16 @@
   display: none;
 }
 
+.headerClock {
+  /* Tabular figures so the colon-separated digits don't shift width as the
+     seconds tick — a proportional font makes "1" narrower than "8". */
+  font-variant-numeric: tabular-nums;
+}
+
+.headerClock::before {
+  content: " · ";
+}
+
 .avatar {
   width: 34px;
   height: 34px;

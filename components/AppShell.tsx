@@ -8,6 +8,7 @@ import { useShopContext, useUser } from "@/lib/shopContext";
 import { clearOfflineData, flushOutbox, syncStore } from "@/lib/api";
 import type { TabId } from "@/lib/types";
 import { formatLongDate } from "@/lib/format";
+import LiveClock from "./LiveClock";
 import styles from "./AppShell.module.css";
 import NotificationToggle, { NotificationBanner, NotificationBell } from "./NotificationToggle";
 import {
@@ -183,7 +184,10 @@ export default function AppShell({
           <div className={styles.screenTitle}>{title}</div>
         </div>
         <div className={styles.headerRight}>
-          <div className={styles.headerDate}>{formatLongDate(new Date())}</div>
+          <div className={styles.headerDate}>
+            {formatLongDate(new Date())}
+            <LiveClock className={styles.headerClock} />
+          </div>
           {user?.role === "admin" && <NotificationBell />}
           <AccountMenu />
         </div>

@@ -132,6 +132,17 @@ export function formatTime(d: Date): string {
   return `${h12}:${mins < 10 ? "0" + mins : mins} ${hours >= 12 ? "PM" : "AM"}`;
 }
 
+/** "9:14:05 AM" — formatTime with seconds, for a live clock rather than a
+ *  recorded bill time. */
+export function formatClock(d: Date): string {
+  const hours = d.getHours();
+  const mins = d.getMinutes();
+  const secs = d.getSeconds();
+  const h12 = hours % 12 === 0 ? 12 : hours % 12;
+  const pad = (n: number) => (n < 10 ? "0" + n : String(n));
+  return `${h12}:${pad(mins)}:${pad(secs)} ${hours >= 12 ? "PM" : "AM"}`;
+}
+
 /** Parses "9:14 AM" back to a 24h hour number. Falls back to midday. */
 export function hourOf(timeLabel: string): number {
   const m = /^(\d{1,2}):(\d{2})\s?(AM|PM)$/i.exec(timeLabel.trim());
