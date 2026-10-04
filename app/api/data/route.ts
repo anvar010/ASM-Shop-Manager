@@ -13,7 +13,13 @@ export async function GET() {
 
   try {
     const pool = db();
-    const [billRows] = await pool.query("SELECT * FROM bills ORDER BY sold_on DESC, sold_at DESC");
+    const [billRows] = await pool.query(
+      /* Time is stored to the minute, not the second (see lib/rows.ts), so
+         several bills entered within the same minute tie on sold_on/sold_at
+         alone — created_at (set once, at insert, to the second) is what
+         actually tells them apart in the order they were entered. */
+      "SELECT * FROM bills ORDER BY sold_on DESC, sold_at DESC, created_at DESC",
+    );
     const [creditPays] = await pool.query(
       /* SELECT * so a database that has not had db/credit-payment-mode.sql run yet
        still loads: the mode column simply is not there. */
@@ -23,9 +29,14 @@ export async function GET() {
        the owner. Gated on the same rule the write routes use, so the tab and
        the data can never disagree. */
     const [expenseRows] = canAccess(user.role, "expenses")
-      ? await pool.query("SELECT * FROM expenses ORDER BY spent_on DESC, spent_at DESC")
+      ? await pool.query("SELECT * FROM expenses ORDER BY spent_on DESC, spent_at DESC, created_at DESC")
       : [[]];
-    const [purchaseRows] = await pool.query("SELECT * FROM purchases ORDER BY bought_on DESC");
+    // Purchases have no time-of-day at all, only a date, so same-day ties are
+    // even more likely than on bills — created_at is the only thing that
+    // orders them correctly.
+    const [purchaseRows] = await pool.query(
+      "SELECT * FROM purchases ORDER BY bought_on DESC, created_at DESC",
+    );
     const [priceRows] = await pool.query(
       "SELECT id, name, category, price, per_qty AS perQty, unit FROM price_items ORDER BY category, name",
     );

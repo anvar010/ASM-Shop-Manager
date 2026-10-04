@@ -43,7 +43,7 @@ export async function GET(request: Request) {
                 b.mode, b.customer, b.amount, COALESCE(SUM(p.amount), 0) AS repaid
          FROM bills b LEFT JOIN bill_credit_payments p ON p.bill_id = b.id
          WHERE b.sold_on BETWEEN ? AND ?
-         GROUP BY b.id ORDER BY b.sold_on, b.sold_at`,
+         GROUP BY b.id ORDER BY b.sold_on, b.sold_at, b.created_at`,
         [from, to],
       );
       body = csv(
@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     } else if (type === "expenses") {
       const [rows] = await db().query(
         `SELECT spent_on, TIME_FORMAT(spent_at, '%H:%i') AS t, description, category, amount
-         FROM expenses WHERE spent_on BETWEEN ? AND ? ORDER BY spent_on, spent_at`,
+         FROM expenses WHERE spent_on BETWEEN ? AND ? ORDER BY spent_on, spent_at, created_at`,
         [from, to],
       );
       body = csv(
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
                 GREATEST(w.amount - w.paid_upfront - COALESCE(SUM(p.amount), 0), 0) AS balance
          FROM purchases w LEFT JOIN purchase_payments p ON p.purchase_id = w.id
          WHERE w.bought_on BETWEEN ? AND ?
-         GROUP BY w.id ORDER BY w.bought_on, w.supplier`,
+         GROUP BY w.id ORDER BY w.bought_on, w.created_at`,
         [from, to],
       );
       body = csv(
