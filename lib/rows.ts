@@ -40,6 +40,7 @@ type PaymentRow = {
   paid_on: string;
   amount: number;
   created_at?: string;
+  created_utc?: string;
   mode?: string;
 };
 
@@ -113,7 +114,7 @@ function toPayment(row: PaymentRow): PurchasePayment {
     id: row.id,
     date: row.paid_on,
     amount: row.amount,
-    at: isoFromSql(row.created_at),
+    at: isoFromSql(row.created_utc ?? row.created_at),
     // Purchase payments have no mode; a credit repayment before the column existed is cash.
     ...(row.mode === "upi" || row.mode === "cash" ? { mode: row.mode } : {}),
   };

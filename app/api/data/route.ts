@@ -23,7 +23,10 @@ export async function GET() {
     const [creditPays] = await pool.query(
       /* SELECT * so a database that has not had db/credit-payment-mode.sql run yet
        still loads: the mode column simply is not there. */
-      "SELECT *, bill_id AS parent_id FROM bill_credit_payments ORDER BY paid_on",
+      /* created_at defaults to the database server's own clock, which is not UTC,
+         so it is converted here; otherwise a repayment's time lands hours in the
+         future and sorts above every sale. */
+      "SELECT *, bill_id AS parent_id, DATE_FORMAT(CONVERT_TZ(created_at, @@session.time_zone, '+00:00'), '%Y-%m-%d %H:%i:%s') AS created_utc FROM bill_credit_payments ORDER BY paid_on",
     );
     /* Expenses go to whoever may record them, which is now staff as well as
        the owner. Gated on the same rule the write routes use, so the tab and
