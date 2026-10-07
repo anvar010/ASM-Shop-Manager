@@ -319,6 +319,10 @@ export const api = {
     send(`/api/bills?id=${encodeURIComponent(id)}`, { method: "DELETE" }, "the deletion"),
   settleBill: (p: { id: string; billId: string; date: string; amount: number; mode?: "cash" | "upi" }) =>
     send("/api/bills/settle", json(p), "the payment"),
+  /** One repayment spread over several bills, sent together so the admins get a single notice. */
+  settleBills: (
+    payments: { id: string; billId: string; date: string; amount: number; mode?: "cash" | "upi" }[],
+  ) => send("/api/bills/settle", json({ payments }), "the payment"),
   updateCreditPayment: (p: { id: string; amount: number }) =>
     send("/api/bills/settle", { ...json(p), method: "PATCH" }, "the correction"),
   deleteCreditPayment: (id: string) =>

@@ -1491,7 +1491,7 @@ export function useShop(signedIn: boolean) {
           return { ...b, creditPayments: [...(b.creditPayments ?? []), payment] };
         }),
       );
-      owing.forEach(({ billId, ...payment }) => api.settleBill({ ...payment, billId }));
+      api.settleBills(owing.map(({ billId, id, date, amount }) => ({ billId, id, date, amount })));
       setSettlingId(null);
       setSettleAmount("");
     },
@@ -1553,7 +1553,7 @@ export function useShop(signedIn: boolean) {
           return { ...b, creditPayments: [...(b.creditPayments ?? []), payment] };
         }),
       );
-      pays.forEach(({ billId, ...payment }) => api.settleBill({ ...payment, billId }));
+      api.settleBills(pays.map(({ billId, id, date, amount, mode }) => ({ billId, id, date, amount, mode })));
       return pays.reduce((sum, p) => sum + p.amount, 0);
     },
     [bills],
