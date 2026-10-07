@@ -393,6 +393,16 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                     <span>Left on their tab</span>
                     <span className="num">{formatINR(owed - applied)}</span>
                   </div>
+                  {shop.receivePlan && (
+                    <div style={{ marginTop: 6, fontSize: 12, fontWeight: 600 }}>
+                      {shop.receivePlan.cleared > 0 &&
+                        `${shop.receivePlan.cleared} ${shop.receivePlan.cleared === 1 ? "bill" : "bills"} cleared`}
+                      {shop.receivePlan.partial &&
+                        `${shop.receivePlan.cleared > 0 ? " · " : ""}1 part-paid (${formatINR(shop.receivePlan.partial.paid)} paid, ${formatINR(shop.receivePlan.partial.left)} still owed)`}
+                      {shop.receivePlan.untouched > 0 &&
+                        ` · ${shop.receivePlan.untouched} pending`}
+                    </div>
+                  )}
                   {/* The common case is clearing the lot, so it is one tap. */}
                   {typedAmount !== owed && (
                     <button
@@ -732,6 +742,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                           style={{ fontSize: 11, color: "var(--text-faint)", fontWeight: 600 }}
                         >
                           {b.customer} · {b.time}
+                          {b.summary ? ` · ${b.summary}` : ""}
                         </span>
                       </div>
                     </div>
@@ -782,6 +793,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                       <div className="num" style={{ fontSize: 14, paddingRight: 6 }}>
                         {b.amountLabel}
                       </div>
+{b.parts.length === 1 && (
                       <button
                         type="button"
                         className={s.rowAction}
@@ -795,6 +807,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                           <IconPencil size={13} color="var(--text-muted)" />
                         </span>
                       </button>
+)}
                       <button
                         type="button"
                         className={s.rowAction}
@@ -802,7 +815,11 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                           ask({
                             title: "Delete this repayment?",
                             detail: `${b.amountLabel} from ${b.customer} · ${b.time}.`,
-                            onConfirm: () => shop.deleteCreditPayment(b.billId, b.id),
+                            warning:
+                              b.parts.length > 1
+                                ? `This was spread over ${b.parts.length} bills; all of it is removed.`
+                                : undefined,
+                            onConfirm: () => b.parts.forEach((x) => shop.deleteCreditPayment(x.billId, x.id)),
                           })
                         }
                         aria-label={`Delete payment from ${b.customer}`}

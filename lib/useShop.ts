@@ -530,31 +530,63 @@ export function useShop(signedIn: boolean) {
    * looked like it came from nowhere. Pulled out here and merged with the
    * sales below so the list matches what actually happened that day.
    */
-  const viewReceivedRows = useMemo(
-    () =>
-      bills.flatMap((b) =>
-        (b.creditPayments ?? [])
-          .filter((p) => p.date === selectedDate)
-          .map((p) => {
-            const mode = modeMeta(p.mode === "upi" ? "upi" : "cash");
-            const at = p.at ? new Date(p.at) : null;
-            return {
-              kind: "received" as const,
-              id: p.id,
-              billId: b.id,
-              customer: b.customer || "Unnamed",
-              desc: b.desc,
-              amount: p.amount,
-              amountLabel: formatINR(p.amount),
-              modeLabel: mode.label,
-              modeColor: mode.color,
-              time: at ? formatTime(at) : "",
-              sortMinutes: at ? at.getHours() * 60 + at.getMinutes() : -1,
-            };
-          }),
-      ),
-    [bills, selectedDate],
-  );
+  const viewReceivedRows = useMemo(() => {
+    /* One payment that clears several bills is stored as one repayment per
+       bill, all stamped at the same moment. Folded back into a single row so
+       the list shows the money that was actually handed over. */
+    const groups = new Map<
+      string,
+      {
+        customer: string;
+        mode: "cash" | "upi";
+        at: Date | null;
+        parts: { billId: string; id: string; amount: number; cleared: boolean }[];
+      }
+    >();
+    bills.forEach((b) => {
+      const paidSoFar = (b.creditPayments ?? []).reduce((sum, p) => sum + p.amount, 0);
+      (b.creditPayments ?? [])
+        .filter((p) => p.date === selectedDate)
+        .forEach((p) => {
+          const customer = b.customer || "Unnamed";
+          const mode = p.mode === "upi" ? "upi" : "cash";
+          const key = p.at ? `${customer}|${p.at}|${mode}` : `solo|${p.id}`;
+          const g = groups.get(key) ?? { customer, mode, at: p.at ? new Date(p.at) : null, parts: [] };
+          g.parts.push({ billId: b.id, id: p.id, amount: p.amount, cleared: paidSoFar >= b.amount });
+          groups.set(key, g);
+        });
+    });
+    return [...groups.values()].map((g) => {
+      const meta = modeMeta(g.mode);
+      const amount = g.parts.reduce((sum, x) => sum + x.amount, 0);
+      const cleared = g.parts.filter((x) => x.cleared).length;
+      const partial = g.parts.length - cleared;
+      const summary =
+        g.parts.length > 1
+          ? [
+              cleared > 0 ? `${cleared} ${cleared === 1 ? "bill" : "bills"} cleared` : "",
+              partial > 0 ? `${partial} part-paid` : "",
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : "";
+      return {
+        kind: "received" as const,
+        id: g.parts[0].id,
+        billId: g.parts[0].billId,
+        parts: g.parts,
+        customer: g.customer,
+        desc: "",
+        amount,
+        amountLabel: formatINR(amount),
+        summary,
+        modeLabel: meta.label,
+        modeColor: meta.color,
+        time: g.at ? formatTime(g.at) : "",
+        sortMinutes: g.at ? g.at.getHours() * 60 + g.at.getMinutes() : -1,
+      };
+    });
+  }, [bills, selectedDate]);
 
   const viewEntries = useMemo(() => {
     const sales = billRows.map((b) => ({ kind: "sale" as const, sortMinutes: minutesOfDay(b.time), ...b }));
@@ -879,6 +911,46 @@ export function useShop(signedIn: boolean) {
     if (typed === "") return null;
     return customerStats.find((r) => r.customer.toLowerCase() === typed) ?? null;
   }, [customerStats, formCustomer]);
+
+  /**
+   * How the typed amount would spread over the customer's bills, using the
+   * same oldest-first order receiveFrom applies, so the note shown before
+   * recording matches what actually happens.
+   */
+  const receivePlan = useMemo(() => {
+    if (!receiveTarget) return null;
+    const name = receiveTarget.customer.toLowerCase();
+    const amt = parseFloat(formAmount);
+    if (!(amt > 0)) return null;
+    const owing = bills
+      .filter((b) => b.mode === "credit" && (b.customer || "Unnamed").toLowerCase() === name)
+      .map((b) => ({
+        bill: b,
+        owed: Math.max(0, b.amount - (b.creditPayments ?? []).reduce((sum, p) => sum + p.amount, 0)),
+      }))
+      .filter((x) => x.owed > 0)
+      .sort(
+        (a, b) =>
+          a.bill.date.localeCompare(b.bill.date) ||
+          minutesOfDay(a.bill.time) - minutesOfDay(b.bill.time),
+      );
+    let left = Math.round(amt * 100);
+    let cleared = 0;
+    let untouched = 0;
+    let partial: { paid: number; left: number } | null = null;
+    for (const { owed } of owing) {
+      const owedCents = Math.round(owed * 100);
+      if (left <= 0) untouched += 1;
+      else if (left >= owedCents) {
+        cleared += 1;
+        left -= owedCents;
+      } else {
+        partial = { paid: left / 100, left: (owedCents - left) / 100 };
+        left = 0;
+      }
+    }
+    return { cleared, untouched, partial };
+  }, [receiveTarget, formAmount, bills]);
 
   /** The person this credit bill would be filed under, if the name exists. */
   const customerExact = useMemo(() => {
@@ -2013,6 +2085,7 @@ export function useShop(signedIn: boolean) {
     deleteCreditCustomer,
     saveReceived,
     receiveTarget,
+    receivePlan,
     owingMatches,
     formKind,
     setFormKind,
