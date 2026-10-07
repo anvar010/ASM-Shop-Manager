@@ -17,6 +17,9 @@ function typedAmountRaw(text: string): number {
   return parseFloat(text) || 0;
 }
 
+/* Not green or blue: those already mean Cash and UPI on a sale. */
+const RECEIVED_BADGE = "#7a4fc4";
+
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -734,7 +737,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                         Received
                       </div>
                       <div className={c.billMeta}>
-                        <span className={c.modeBadge} style={{ background: b.modeColor }}>
+                        <span className={c.modeBadge} style={{ background: RECEIVED_BADGE }}>
                           {b.modeLabel}
                         </span>
                         <span
