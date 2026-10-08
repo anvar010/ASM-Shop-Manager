@@ -543,6 +543,7 @@
 
   .amountDisplay {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     justify-content: flex-end;
     gap: 6px;
@@ -894,4 +895,65 @@
   20% { transform: translateX(-6px); }
   50% { transform: translateX(6px); }
   80% { transform: translateX(-3px); }
+}
+
+/* "How it was paid" folds shut like the day's total above it. */
+.paymentHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  color: var(--text);
+}
+
+.paymentChevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+/* The sum so far, small above the total: 100 + 50 + */
+.padTape {
+  order: -1;
+  flex: 1 0 100%;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-faint);
+}
+
+.opRow {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: inherit;
+}
+
+.opKey {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+}
+
+.itemsButton {
+  width: 100%;
+  margin-top: 8px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.itemsButton:hover {
+  background: var(--surface-alt);
 }

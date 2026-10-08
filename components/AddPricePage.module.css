@@ -658,3 +658,22 @@
 .catSave:disabled {
   opacity: 0.45;
 }
+
+.wholesaleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.wholesaleLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.wholesaleRow .rowMini {
+  margin-left: auto;
+  max-width: 180px;
+}

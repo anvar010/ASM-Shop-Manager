@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useConfirm } from "./ConfirmDialog";
 import BillRowEditor from "./BillRowEditor";
 import VoiceButton from "./VoiceButton";
 import DayClosing from "./DayClosing";
+import ItemPicker from "./ItemPicker";
 import type { Shop } from "@/lib/useShop";
 import { CATEGORIES, PAD_KEYS, PAYMENT_MODES } from "@/lib/constants";
 import { formatDMY, formatINR, groupIN } from "@/lib/format";
 import s from "./shared.module.css";
 import c from "./BillsTab.module.css";
-import { IconBackspace, IconBill, IconChevron, IconPencil, IconPlus, IconTrash } from "./Icons";
+import { IconBackspace, IconBill, IconChevron, IconMinus, IconPencil, IconPlus, IconTrash } from "./Icons";
 
 /** The keypad amount as a number; empty or unfinished reads as zero. */
 function typedAmountRaw(text: string): number {
@@ -23,6 +24,8 @@ const RECEIVED_BADGE = "#7a4fc4";
 export default function BillsTab({ shop }: { shop: Shop }) {
   const [customerOpen, setCustomerOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [editPaymentAmount, setEditPaymentAmount] = useState("");
   const { ask, dialog } = useConfirm();
@@ -103,6 +106,15 @@ export default function BillsTab({ shop }: { shop: Shop }) {
               ₹
             </span>
             <span className={`num ${c.amountValue}`}>{amountDisplay}</span>
+            {shop.padParts.length > 0 && (
+              <span className={`num ${c.padTape}`}>
+                {shop.padParts
+                  .map((n, i) => (i === 0 ? groupIN(n) : `${n < 0 ? "−" : "+"} ${groupIN(Math.abs(n))}`))
+                  .join(" ")}{" "}
+                {shop.padNeg ? "−" : "+"}{" "}
+                {shop.padAddend !== "" ? groupIN(Number(shop.padAddend)) : ""}
+              </span>
+            )}
           </div>
           <div className={c.keypad}>
             {PAD_KEYS.map((k) => (
@@ -116,6 +128,24 @@ export default function BillsTab({ shop }: { shop: Shop }) {
                 {k === "back" ? <IconBackspace size={20} color="var(--text-muted)" /> : k}
               </button>
             ))}
+            <div className={c.opRow}>
+            <button
+              type="button"
+              className={`${c.keyButton} ${c.opKey}`}
+              onClick={() => shop.pressPad("-")}
+              aria-label="Take this amount off and key in another"
+            >
+              <IconMinus size={18} color="currentColor" />
+            </button>
+            <button
+              type="button"
+              className={`${c.keyButton} ${c.opKey}`}
+              onClick={() => shop.pressPad("+")}
+              aria-label="Add this amount and key in another"
+            >
+              <IconPlus size={18} color="currentColor" />
+            </button>
+            </div>
           </div>
 
           {/* Native numeric input path (mobile) */}
@@ -553,6 +583,11 @@ export default function BillsTab({ shop }: { shop: Shop }) {
               Add Bill
             </button>
           )}
+          {sale && !shop.editingBillId && (
+            <button type="button" className={c.itemsButton} onClick={() => setPickerOpen(true)}>
+              Add from items
+            </button>
+          )}
         </div>
       </div>
     </section>
@@ -560,10 +595,18 @@ export default function BillsTab({ shop }: { shop: Shop }) {
 
   const paymentCard = (
     <section className={s.card}>
-      <div className={s.cardTitle} style={{ marginBottom: 14 }}>
-        How it was paid
-      </div>
-      <div className={s.stack}>
+      <button
+        type="button"
+        className={c.paymentHeader}
+        onClick={() => setPaymentOpen(!paymentOpen)}
+        aria-expanded={paymentOpen}
+      >
+        <span className={s.cardTitle}>How it was paid</span>
+        <span className={`${c.paymentChevron} ${paymentOpen ? c.summaryToggleOpen : ""}`}>
+          <IconChevron size={18} color="currentColor" />
+        </span>
+      </button>
+      {paymentOpen && <div className={s.stack} style={{ marginTop: 14 }}>
         {[
           ...shop.paymentSplit.map((m) => ({
             id: m.id as string,
@@ -629,11 +672,14 @@ export default function BillsTab({ shop }: { shop: Shop }) {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
     </section>
   );
 
-  const entries = (
+  /* Rebuilt only when the day's entries change. The keypad moves `shop` on
+     every key press, and redrawing a few hundred rows each time is what made
+     the keys feel slow. */
+  const entries = useMemo(() => (
     <section className={s.card}>
       <div className={s.rowBetween} style={{ marginBottom: 14 }}>
         <div className={s.cardTitle}>
@@ -861,7 +907,23 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         </div>
       )}
     </section>
-  );
+  ), [
+    shop.viewEntries,
+    shop.viewCount,
+    shop.viewCollected,
+    shop.isTodayView,
+    shop.selectedDay,
+    shop.editingBillId,
+    shop.editBill,
+    shop.deleteBill,
+    shop.editCreditPayment,
+    shop.deleteCreditPayment,
+    /* The row being edited reads the live form, so it must follow it. */
+    shop.editingBillId ? shop : null,
+    editingPaymentId,
+    editPaymentAmount,
+    ask,
+  ]);
 
   return (
     <div>
@@ -977,6 +1039,7 @@ export default function BillsTab({ shop }: { shop: Shop }) {
         </div>
       </div>
       {dialog}
+      {pickerOpen && <ItemPicker shop={shop} onClose={() => setPickerOpen(false)} />}
     </div>
   );
 }

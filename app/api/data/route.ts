@@ -41,7 +41,7 @@ export async function GET() {
       "SELECT * FROM purchases ORDER BY bought_on DESC, created_at DESC",
     );
     const [priceRows] = await pool.query(
-      "SELECT id, name, category, price, per_qty AS perQty, unit FROM price_items ORDER BY category, name",
+      "SELECT id, name, category, price, wholesale_price AS wholesalePrice, per_qty AS perQty, unit FROM price_items ORDER BY category, name",
     );
     const [categoryRows] = await pool.query(
       "SELECT name FROM price_categories ORDER BY name",

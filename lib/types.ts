@@ -113,6 +113,8 @@ export interface PriceItem {
   category?: string | null;
   /** What the stated amount costs. */
   price: number;
+  /** Optional wholesale price for the same amount and unit. */
+  wholesalePrice?: number | null;
   /** How much that price covers — 100, for "100 gram for ₹30". */
   perQty: number;
   /** The unit that amount is in: "gram", "kg", "litre". */

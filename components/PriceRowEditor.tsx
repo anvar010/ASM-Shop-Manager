@@ -31,6 +31,9 @@ export default function PriceRowEditor({
   const [name, setName] = useState(item.name);
   const [category, setCategory] = useState(item.category ?? "");
   const [price, setPrice] = useState(String(item.price));
+  const [wholesale, setWholesale] = useState(
+    item.wholesalePrice != null ? String(item.wholesalePrice) : "",
+  );
   const [perQty, setPerQty] = useState(String(item.perQty ?? 1));
   const [unit, setUnit] = useState(item.unit ?? "kg");
 
@@ -120,6 +123,24 @@ export default function PriceRowEditor({
         </div>
       </div>
 
+      <div className={c.wholesaleRow}>
+        <span className={c.wholesaleLabel}>Wholesale</span>
+        <div className={c.rowMini}>
+          <span className={c.rowMiniPrefix}>₹</span>
+          <input
+            className={`num ${c.rowMiniInput}`}
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            placeholder="optional"
+            value={wholesale}
+            onChange={(e) => setWholesale(e.target.value)}
+            aria-label="Wholesale price"
+          />
+        </div>
+      </div>
+
       {clash && (
         <div className={c.rowClash}>Another item is already called “{name.trim()}”.</div>
       )}
@@ -135,6 +156,7 @@ export default function PriceRowEditor({
               name: name.trim(),
               category: category.trim() || null,
               price: amount,
+              wholesalePrice: Number.isNaN(parseFloat(wholesale)) ? null : parseFloat(wholesale),
               perQty: qty,
               unit: isUnit(unit) ? unit : null,
             })

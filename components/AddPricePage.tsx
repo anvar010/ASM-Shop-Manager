@@ -159,6 +159,25 @@ export default function AddPricePage() {
               <span className={c.stepLabel}>What does it cost, and for how much?</span>
             </div>
 
+            <div className={c.wholesaleRow}>
+              <span className={c.wholesaleLabel}>Wholesale price</span>
+              <span className={c.stepHint}>optional · for {perQty > 0 ? perQty : 1} {unitShort}</span>
+              <div className={c.rowMini}>
+                <span className={c.rowMiniPrefix}>₹</span>
+                <input
+                  className={`num ${c.rowMiniInput}`}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={shop.priceWholesale}
+                  onChange={(e) => shop.setPriceWholesale(e.target.value)}
+                  aria-label="Wholesale price"
+                />
+              </div>
+            </div>
+
             {/* Quoted the way a shop quotes it — "₹30 for 100 gram" — rather
                 than forcing everything to a price for one of something. */}
             <div className={c.quoteRow}>
@@ -437,6 +456,7 @@ export default function AddPricePage() {
                       <span className={`${s.truncate} ${c.existingName}`}>{p.name}</span>
                       <span className={c.existingMeta}>
                         {p.priceLabel} for {p.perLabel}
+                        {p.wholesaleLabel ? ` · wholesale ${p.wholesaleLabel}` : ""}
                         {p.category ? ` · ${p.category}` : ""}
                       </span>
                     </div>

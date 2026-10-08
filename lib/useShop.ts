@@ -110,6 +110,7 @@ export function useShop(signedIn: boolean) {
   const [priceName, setPriceName] = useState("");
   const [priceAmount, setPriceAmount] = useState("");
   const [priceUnit, setPriceUnit] = useState("kg");
+  const [priceWholesale, setPriceWholesale] = useState("");
   const [pricePerQty, setPricePerQty] = useState("1");
   const [priceCategory, setPriceCategory] = useState("");
   const [purchaseSearch, setPurchaseSearch] = useState("");
@@ -720,6 +721,7 @@ export function useShop(signedIn: boolean) {
       .map((p) => ({
         ...p,
         priceLabel: formatINR(p.price),
+        wholesaleLabel: p.wholesalePrice != null ? formatINR(p.wholesalePrice) : null,
         /* "₹30 / 100 g" reads as the shelf label; the rate behind it is what
            the calculator actually multiplies. */
         perLabel: quantityLabel(p.perQty ?? 1, p.unit),
@@ -1120,24 +1122,87 @@ export function useShop(signedIn: boolean) {
   const amountRef = useRef("");
   amountRef.current = formAmount;
   const [padBlocked, setPadBlocked] = useState(0);
+  /* The keypad adds as it goes: 100 + 50 + 20 is three parts and a total.
+     `formAmount` always holds that total, so everything that saves a bill
+     reads one number and never needs to know the sum was built up. */
+  const [padParts, setPadParts] = useState<number[]>([]);
+  const [padAddend, setPadAddend] = useState("");
+  /* Whether the number being typed is taken off rather than added. */
+  const [padNeg, setPadNeg] = useState(false);
+  const padRef = useRef({ parts: [] as number[], addend: "", neg: false });
+  padRef.current = { parts: padParts, addend: padAddend, neg: padNeg };
+
+  const padTotal = (parts: number[], addend: string, neg: boolean) =>
+    parts.reduce((t, n) => t + n, 0) + (neg ? -1 : 1) * (parseFloat(addend) || 0);
+  const totalText = (total: number) => (total > 0 ? String(Number(total.toFixed(2))) : "");
+
+  const setPad = useCallback((parts: number[], addend: string, neg: boolean) => {
+    setPadParts(parts);
+    setPadAddend(addend);
+    setPadNeg(neg);
+    setFormAmount(totalText(padTotal(parts, addend, neg)));
+  }, []);
+
+  /* An amount set from anywhere else — a mic, an "owed" shortcut, an edit —
+     replaces the sum rather than being added to it. */
+  useEffect(() => {
+    const { parts, addend, neg } = padRef.current;
+    if (formAmount !== totalText(padTotal(parts, addend, neg))) {
+      setPadParts([]);
+      setPadAddend(formAmount);
+      setPadNeg(false);
+    }
+  }, [formAmount]);
+
   const pressPad = useCallback(
     (k: string) => {
-      if (k !== "back" && amountRef.current.length >= (formKind === "sale" ? 7 : 9)) {
+      const { parts, addend, neg } = padRef.current;
+      const typed = parseFloat(addend) || 0;
+      if (k === "back") {
+        if (addend !== "") setPad(parts, addend.slice(0, -1), neg);
+        else if (parts.length > 0) {
+          /* Backing over a sign reopens the number before it. */
+          const last = parts[parts.length - 1];
+          setPad(parts.slice(0, -1), String(Math.abs(last)), last < 0);
+        }
+        return;
+      }
+      if (k === "+" || k === "-") {
+        const nextNeg = k === "-";
+        if (typed > 0) setPad([...parts, neg ? -typed : typed], "", nextNeg);
+        /* Nothing typed yet: just change which way the next number goes. */
+        else if (parts.length > 0) setPad(parts, "", nextNeg);
+        return;
+      }
+      if (addend.length >= (formKind === "sale" ? 7 : 9)) {
         setPadBlocked((n) => n + 1);
         return;
       }
-      setFormAmount((cur) => {
-        if (k === "back") return cur.slice(0, -1);
-        if (cur === "" && (k === "0" || k === "00")) return cur;
-        return cur + k;
-      });
+      if (addend === "" && (k === "0" || k === "00")) return;
+      setPad(parts, addend + k, neg);
     },
-    [formKind],
+    [formKind, setPad],
+  );
+
+  /** Adds (or, if negative, takes off) a figure — a priced item — on top of
+      whatever is already keyed in. */
+  const addToAmount = useCallback(
+    (amount: number) => {
+      if (!amount) return;
+      const { parts, addend, neg } = padRef.current;
+      const typed = parseFloat(addend) || 0;
+      const kept = typed > 0 ? [...parts, neg ? -typed : typed] : parts;
+      setPad([...kept, amount], "", false);
+    },
+    [setPad],
   );
 
   const resetBillForm = useCallback(() => {
     setEditingBillId(null);
     setFormAmount("");
+    setPadParts([]);
+    setPadAddend("");
+    setPadNeg(false);
     setFormDesc("");
     setFormCustomer("");
     setFormDate(today);
@@ -1818,6 +1883,7 @@ export function useShop(signedIn: boolean) {
       name: existing?.name ?? name,
       category: priceCategory.trim() || null,
       price: amount,
+      wholesalePrice: Number.isNaN(parseFloat(priceWholesale)) ? null : parseFloat(priceWholesale),
       perQty: Math.max(parseFloat(pricePerQty) || 1, 0.001),
       unit: priceUnit.trim() || null,
     };
@@ -1827,8 +1893,9 @@ export function useShop(signedIn: boolean) {
     api.savePrice(item);
     setPriceName("");
     setPriceAmount("");
+    setPriceWholesale("");
     return true;
-  }, [prices, priceName, priceAmount, priceUnit, pricePerQty, priceCategory]);
+  }, [prices, priceName, priceAmount, priceWholesale, priceUnit, pricePerQty, priceCategory]);
 
   /* Saves a whole item as given, so a row can be corrected where it sits
      without borrowing the fields the add form is using. */
@@ -1980,6 +2047,10 @@ export function useShop(signedIn: boolean) {
     customerExact,
     creditTotal,
     pressPad,
+    padParts,
+    padAddend,
+    padNeg,
+    addToAmount,
     editingBillId,
     saveBill,
     resetBillForm,
@@ -2019,6 +2090,8 @@ export function useShop(signedIn: boolean) {
     setPriceName,
     priceAmount,
     setPriceAmount,
+    priceWholesale,
+    setPriceWholesale,
     priceUnit,
     setPriceUnit,
     pricePerQty,

@@ -29,10 +29,11 @@ export async function POST(request: Request) {
     }
 
     await db().execute(
-      `INSERT INTO price_items (id, name, category, price, per_qty, unit)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO price_items (id, name, category, price, wholesale_price, per_qty, unit)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE category = VALUES(category),
                                price    = VALUES(price),
+                               wholesale_price = VALUES(wholesale_price),
                                per_qty  = VALUES(per_qty),
                                unit     = VALUES(unit)`,
       [
@@ -40,6 +41,7 @@ export async function POST(request: Request) {
         name,
         item.category?.trim() || null,
         item.price,
+        item.wholesalePrice != null && item.wholesalePrice >= 0 ? item.wholesalePrice : null,
         item.perQty > 0 ? item.perQty : 1,
         item.unit?.trim() || null,
       ],
